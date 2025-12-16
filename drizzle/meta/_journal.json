@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1765868655333,
+      "tag": "0000_petite_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765875216319,
+      "tag": "0001_cute_tony_stark",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765878091064,
+      "tag": "0002_steady_sunfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765883642098,
+      "tag": "0003_graceful_junta",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765885232301,
+      "tag": "0004_yellow_joseph",
+      "breakpoints": true
+    }
+  ]
+}
