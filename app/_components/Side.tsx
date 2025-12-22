@@ -32,7 +32,6 @@ import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CollapsibleContent } from "@radix-ui/react-collapsible";
 
 //Client Page List
-
 const ClientItems = [
   {
     title: "Clients",
@@ -46,17 +45,32 @@ const ClientItems = [
   },
 ];
 
+//Invoice Management
+const InvoiceItems = [
+  {
+    title: "Invoices",
+    url: "/invoices",
+    icon: ReceiptText,
+  },
+  {
+    title: "Create Invoice",
+    url: "/invoices/create",
+    icon: CirclePlus,
+  },
+];
+
+
 //Product Management
 const Productitems=[
   {
-    title: "Products",
+    title: "Products & Services",
     url: "/products",
-    icon: Inbox,
+    icon: Package,
   },
   {
     title: "Inventory",
     url: "/inventory",
-    icon: Package,
+    icon: Inbox,
   },
   {
     title: "Add Product",
@@ -87,9 +101,10 @@ const items = [
     url: "/seller-dashboard/search",
     icon: Search,
   },
+
   {
     title: "Settings",
-    url: "/seller-dashboard/settings",
+    url: "/settings",
     icon: Settings,
   },
 ];
@@ -111,13 +126,13 @@ export default function Side() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent >
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <a href={item.url}>
-                      <item.icon />
+                      <item.icon className=""/>
                       <span>{item.title}</span>
                     </a>
                   </SidebarMenuButton>
@@ -176,6 +191,32 @@ export default function Side() {
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+
+        <Collapsible defaultOpen className="group/collapsible">
+          <SidebarGroup>
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger>
+                Manage Invoices
+                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                {InvoiceItems.map((invitem) => (
+                <SidebarMenuItem key={invitem.title}>
+                  <SidebarMenuButton asChild tooltip={invitem.title}>
+                    <a href={invitem.url}>
+                      <invitem.icon />
+                      <span>{invitem.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+        
       </SidebarContent>
     </Sidebar>
   );

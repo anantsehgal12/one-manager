@@ -1,35 +1,40 @@
+# Product Dropdown Table Implementation Plan
 
-# TODO: Client Filtering Enhancement - COMPLETED ✅
+## Information Gathered
+- Current product dropdown uses Command-based search interface with card layout for selected products
+- Table component is available with Table, TableHeader, TableBody, TableRow, TableHead, TableCell components
+- Selected products section displays: Product details, Quantity, Unit Price, Price with Tax, Discount, and Line Total
+- Need to maintain all existing functionality while converting the visual layout
 
-## Implementation Summary
-✅ **COMPLETED:** Client filtering by orgId only (organization-wide client visibility)
+## Plan
+1. **Convert Selected Products Section to Table Format**
+   - Replace the current card-based layout with a responsive table
+   - Use Table, TableHeader, TableBody, TableRow, TableHead, TableCell components
+   - Create appropriate column headers for: Product, Quantity, Unit Price, Discount %, Price with Tax, Total, Actions
 
-## Changes Made
+2. **Maintain All Existing Functionality**
+   - Keep the search and selection interface unchanged
+   - Preserve all quantity, price, and discount update functions
+   - Maintain responsive behavior and accessibility
 
-### ✅ Phase 1: API Route Update
-- **File:** `app/api/clients/route.ts`
-- **Change:** Modified GET request to filter by `orgId` only instead of both `userId` AND `orgId`
-- **Result:** Users now see ALL clients in their current organization (regardless of who created them)
-- **Maintained:** Proper authentication and security with orgId isolation
+3. **Improve Table Usability**
+   - Add proper column alignment and styling
+   - Ensure mobile responsiveness with horizontal scroll
+   - Include remove action in table
+   - Maintain formatted currency display
 
-### ✅ Current Implementation Status
-- ✅ Database schema has orgId fields with proper indexes
-- ✅ Authentication functions (`getCurrentUserId()`, `getCurrentOrgId()`) working correctly
-- ✅ API filtering by organization only (orgId)
-- ✅ Client creation still stores both userId and orgId for tracking
-- ✅ Frontend client page displays all organization clients
+## Dependent Files to be edited
+- app/_components/product-dropdown.tsx (main component to update)
 
-## Expected Behavior
-- Users see all clients within their current organization
-- Organization data is properly isolated (no cross-organization visibility)
-- Each client is still trackable by who created it (userId stored but not used for filtering)
-- Maintains security between different organizations
+## Implementation Steps
+1. Import Table components from ui/table
+2. Replace the selected products card layout with Table component
+3. Create appropriate table structure with headers and rows
+4. Convert each product card to a table row with editable cells
+5. Ensure all functionality remains intact
+6. Test responsive behavior and accessibility
 
-## Key Technical Details
-- **Filtering Logic:** Only `eq(clientsTable.orgId, orgId)` in WHERE clause
-- **Security:** Organization-level data isolation maintained
-- **Performance:** Uses existing orgId indexes for fast queries
-- **Compatibility:** No breaking changes, backward compatible
-
-## Status: ✅ COMPLETED
-The client filtering system now correctly shows all clients within the current organization, providing organization-wide visibility while maintaining proper data isolation between organizations.
+## Followup Steps
+- Test the updated component functionality
+- Verify responsive design on different screen sizes
+- Ensure all interactive elements work correctly

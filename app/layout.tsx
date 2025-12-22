@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "react-hot-toast";
+import AuthSync from './_components/AuthSync'
 
 const Jet = JetBrains_Mono({
   variable: "--font-jet-mono",
@@ -34,6 +35,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange>
               <Toaster position="bottom-right"/>
+              <AuthSync />
               {children}
             </ThemeProvider>
           </SidebarProvider>

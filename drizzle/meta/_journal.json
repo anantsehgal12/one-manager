@@ -36,6 +36,90 @@
       "when": 1765885232301,
       "tag": "0004_yellow_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1766071534038,
+      "tag": "0005_last_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1766074831473,
+      "tag": "0006_ambitious_cannonball",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1766126547865,
+      "tag": "0007_classy_goblin_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1766129557410,
+      "tag": "0008_boring_marvex",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1766129790565,
+      "tag": "0009_workable_wiccan",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1766135938442,
+      "tag": "0010_reflective_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1766136970508,
+      "tag": "0011_brown_mongu",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1766153287051,
+      "tag": "0012_dashing_gravity",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1766156324843,
+      "tag": "0013_unknown_eternity",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1766212262848,
+      "tag": "0014_freezing_albert_cleary",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1766221950092,
+      "tag": "0015_large_george_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1766244232026,
+      "tag": "0016_lame_viper",
+      "breakpoints": true
     }
   ]
 }

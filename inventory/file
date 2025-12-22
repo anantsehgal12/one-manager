@@ -1,0 +1,24 @@
+For unit, there will be only 6 options [For Options, use screenshot attached: '@/swipe/1.png' ]  For this, make a dropdown menu to select the units and make sure to update the schema for this
+
+
+
+<Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateQuantity(product.id, quantity - 1)}
+                          disabled={disabled}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+
+
+<Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateQuantity(product.id, quantity + 1)}
+                          disabled={disabled}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>

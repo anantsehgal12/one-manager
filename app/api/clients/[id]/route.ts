@@ -8,13 +8,19 @@ import { eq, and } from 'drizzle-orm'
 
 
 // GET - Fetch a specific client
+async function resolveParams(context: any) {
+  if (!context) return {};
+  const p = context.params;
+  return p instanceof Promise ? await p : p;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   try {
+    const params = await resolveParams(context);
     console.log('API: Fetching client with params:', params)
-    
     const userId = await getCurrentUserId()
     const orgId = await getCurrentOrgId()
 
@@ -77,7 +83,7 @@ export async function GET(
 // PUT - Update a specific client
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
 
   try {
@@ -103,6 +109,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await resolveParams(context);
     const clientId = params.id
 
     // First verify the client exists and belongs to the current organization
@@ -161,7 +168,7 @@ export async function PUT(
 // DELETE - Delete a specific client
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: any
 ) {
   try {
     const userId = await getCurrentUserId()
@@ -172,6 +179,7 @@ export async function DELETE(
     }
 
 
+    const params = await resolveParams(context);
     const clientId = params.id
 
     // First verify the client exists and belongs to the current organization

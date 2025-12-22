@@ -21,6 +21,7 @@ import { toast } from 'react-hot-toast'
 import Side from '@/app/_components/Side'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Header from '@/app/_components/Header'
+import { SignIn, useUser } from '@clerk/nextjs'
 
 const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -147,6 +148,18 @@ export default function Page() {
       toast.error(error instanceof Error ? error.message : 'Failed to fetch GST details')
     }
   }
+  const { isSignedIn } = useUser()
+    if (!isSignedIn) {
+      return (
+        <main className="flex w-full min-h-screen flex-col items-center bg-background px-6">
+          <Header />
+          <section className='py-10 flex flex-col items-center justify-center gap-8'>
+            <span>Please SignIn/SignUp below with your account to access this page.</span>
+            <SignIn />
+          </section>
+        </main>
+      )
+    }
 
   return (
     <SidebarProvider>

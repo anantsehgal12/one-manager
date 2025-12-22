@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useOrganization } from '@clerk/nextjs'
+import { SignIn, useOrganization, useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -145,8 +145,45 @@ export default function ClientsPage() {
       day: 'numeric',
     })
   }
+  const getRandomLightColor = () => {
+    const lightColors = [
+      'bg-blue-200',
+      'bg-green-200', 
+      'bg-yellow-200',
+      'bg-pink-200',
+      'bg-purple-200',
+      'bg-indigo-200',
+      'bg-red-200',
+      'bg-orange-200',
+      'bg-teal-200',
+      'bg-cyan-200'
+    ]
+    return lightColors[Math.floor(Math.random() * lightColors.length)]
+  }
+  const getClientInitials = (companyName: string | null) => {
+    if (!companyName) return '?'
+    const words = companyName.trim().split(' ')
+    if (words.length === 1) {
+      return words[0].charAt(0).toUpperCase()
+    } else {
+      // For two or more words, get first letter of first two words
+      return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase()
+    }
+  }
+  const { isSignedIn } = useUser()
+    if (!isSignedIn) {
+      return (
+        <main className="flex w-full min-h-screen flex-col items-center bg-background px-6">
+          <Header />
+          <section className='py-10 flex flex-col items-center justify-center gap-8'>
+            <span>Please SignIn/SignUp below with your account to access this page.</span>
+            <SignIn />
+          </section>
+        </main>
+      )
+    }
 
-  if (isLoading) {
+  if (isLoading && isSignedIn) {
     return (
       <SidebarProvider>
         <Side />
@@ -228,8 +265,8 @@ export default function ClientsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Company Name</TableHead>
+                    <TableHead className='px-9'>Company Name</TableHead>
+                    <TableHead>GST</TableHead>
                     <TableHead>Balance</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -262,9 +299,21 @@ export default function ClientsPage() {
                   ) : (
                     filteredClients.map((client) => (
                       <TableRow key={client.id}>
-                        <TableCell>
+                        <TableCell className='px-6 py-4'>
                           <div>
-                            <div className="font-medium">{client.name}</div>
+                            <div className="font-medium inline-flex gap-5 items-center">
+                              <span className={`rounded-full ${getRandomLightColor()} text-black h-6 w-6 items-center justify-center flex text-sm font-medium`}>
+                                {getClientInitials(client.companyName)}
+                              </span>
+                              <span className='flex-col flex'>
+                                <span>
+                                  {client.companyName}
+                                </span>
+                                <span className='text-xs text-gray-400'>
+                                  {client.name}
+                                </span>
+                              </span>
+                            </div>
                             <div className="text-sm text-muted-foreground">
                               {client.mobileNo && (
                                 <span className="mr-2">📞 {client.mobileNo}</span>
@@ -277,19 +326,12 @@ export default function ClientsPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">
-                              {client.companyName || '-'}
-                            </div>
                             {client.gst && (
                               <div className="text-sm text-muted-foreground">
-                                GST: {client.gst}
+                                {client.gst}
                               </div>
                             )}
-                            {client.billingCity && client.billingState && (
-                              <div className="text-sm text-muted-foreground">
-                                {client.billingCity}, {client.billingState}
-                              </div>
-                            )}
+                            
                           </div>
                         </TableCell>
                         <TableCell>
