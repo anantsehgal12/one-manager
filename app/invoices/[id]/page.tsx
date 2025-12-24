@@ -1,13 +1,18 @@
+
 'use client'
 
 import React from 'react'
 import Image from 'next/image'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { useUser } from '@clerk/nextjs'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import { Download, FileText } from 'lucide-react'
+import { InvoicePdf } from '@/app/_components/InvoicePdf'
+import { pdf } from '@react-pdf/renderer'
 
 interface InvoiceData {
   id: string
@@ -50,6 +55,7 @@ interface InvoiceData {
     pan: string | null
     email: string | null
     phone: string | null
+    logoUrl: string | null
   }
   
   bank: {
@@ -73,6 +79,7 @@ interface InvoiceData {
     hsnSacCode: string | null
   }>
 }
+
 
 
 
@@ -111,15 +118,76 @@ function convertToWords(amount: number): string {
   return convert(Math.floor(amount))
 }
 
+
 export default function InvoicePage() {
   const params = useParams()
+  const router = useRouter()
   const { isSignedIn } = useUser()
   const [invoice, setInvoice] = useState<InvoiceData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
   
+
   // Extract invoice ID from params Promise
   const invoiceId = params.id as string
+  
+
+
+  // PDF Generation function
+  const generatePDF = async () => {
+    if (!invoice) {
+      toast.error('Invoice data not available');
+      return;
+    }
+    
+    try {
+      setGeneratingPdf(true);
+      
+      // Create the PDF document
+      const doc = <InvoicePdf invoice={invoice} />;
+      const pdfInstance = pdf(doc);
+      
+      // Convert to blob with error handling
+      const blob = await pdfInstance.toBlob();
+      
+      // Check if blob was generated successfully
+      if (!blob) {
+        throw new Error('Failed to generate PDF blob');
+      }
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoice.invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast.success('PDF generated successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+  
+  useEffect(() => {
+    // Check if PDF generation is requested via query parameter
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('generatePdf') === 'true' && invoice) {
+      generatePDF();
+      // Clean up URL
+      window.history.replaceState({}, '', `/invoices/${invoiceId}`);
+    }
+  }, [invoice, invoiceId]);
   
   useEffect(() => {
     if (!isSignedIn) {
@@ -216,6 +284,7 @@ export default function InvoicePage() {
   const totalItems = invoice.items.length
   const totalQuantity = invoice.items.reduce((sum, item) => sum + parseFloat(item.quantity), 0)
   
+
   return (
     <main className='w-full p-12'>
       <Card className="max-w-4xl mx-auto">
@@ -226,14 +295,36 @@ export default function InvoicePage() {
               <p className="text-sm text-gray-600">Original for Recipient</p>
             </div>
           </div>
-          <div className="flex-shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Company Logo"
-              width={80}
-              height={80}
-              className="object-contain"
-            />
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={generatePDF}
+              disabled={generatingPdf}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {generatingPdf ? 'Generating...' : 'Download PDF'}
+            </Button>
+            {(invoice.company.logoUrl || invoice.company.companyName) && (
+              <div className="flex-shrink-0">
+                {invoice.company.logoUrl ? (
+                  <Image
+                    src={invoice.company.logoUrl}
+                    alt="Company Logo"
+                    width={80}
+                    height={80}
+                    className="object-contain"
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">
+                    <span className="text-xs text-gray-500 text-center">
+                      {invoice.company.companyName?.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 3) || 'LOGO'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -294,8 +385,11 @@ export default function InvoicePage() {
                     )}
                   </TableCell>
                   <TableCell className="text-center">{formatCurrency(item.rate)}</TableCell>
+
                   <TableCell className="text-center">{item.quantity}</TableCell>
-                  <TableCell className="text-center">{formatCurrency(item.totalAmount)}</TableCell>
+                  <TableCell className="text-center">
+                    {formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}
+                  </TableCell>
                   <TableCell className="text-center">
                     {formatCurrency(item.taxAmount)} ({item.taxPercentage}%)
                   </TableCell>

@@ -322,6 +322,7 @@ export const companyDetailsTable = pgTable(
     pan: varchar("pan", { length: 20 }),
     email: varchar("email", { length: 255 }),
     phone: varchar("phone", { length: 20 }),
+    logoUrl: text("logo_url"),
     
     isDefault: boolean("is_default").default(false).notNull(),
 

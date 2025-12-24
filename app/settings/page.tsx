@@ -61,8 +61,14 @@ export default function SettingsPage() {
         gst: '',
         pan: '',
         email: '',
-        phone: ''
+        phone: '',
+        logoUrl: ''
     })
+
+    // Logo upload state
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false)
+    const [logoFile, setLogoFile] = useState<File | null>(null)
+    const [logoPreview, setLogoPreview] = useState<string>('')
 
     // Company Details API state
     const [companyDetailsList, setCompanyDetailsList] = useState<any[]>([])
@@ -175,7 +181,8 @@ export default function SettingsPage() {
                         gst: defaultDetail.gst || '',
                         pan: defaultDetail.pan || '',
                         email: defaultDetail.email || '',
-                        phone: defaultDetail.phone || ''
+                        phone: defaultDetail.phone || '',
+                        logoUrl: defaultDetail.logoUrl || ''
                     }))
                 }
             } else {
@@ -540,6 +547,111 @@ export default function SettingsPage() {
         }
     }
 
+    // Logo upload handler
+    const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        // Validate file
+        const maxSize = 2 * 1024 * 1024 // 2MB
+        if (file.size > maxSize) {
+            toast.error('File size must be less than 2MB')
+            return
+        }
+
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+        if (!allowedTypes.includes(file.type)) {
+            toast.error('File type must be JPEG, PNG, WebP, or GIF')
+            return
+        }
+
+        setIsUploadingLogo(true)
+        try {
+            const formData = new FormData()
+            formData.append('logo', file)
+            
+            // Pass the actual company detail ID if available
+            const defaultCompanyDetail = companyDetailsList.find(c => c.isDefault) || companyDetailsList[0]
+            formData.append('companyId', defaultCompanyDetail?.id || 'default')
+
+            console.log('Uploading logo with:', {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                companyId: defaultCompanyDetail?.id || 'default'
+            })
+
+            const response = await fetch('/api/settings/upload-logo', {
+                method: 'POST',
+                body: formData,
+            })
+
+            console.log('Upload response:', response.status, response.statusText)
+
+            if (response.ok) {
+                const data = await response.json()
+                console.log('Upload successful:', data)
+                
+                setCompanyDetails(prev => ({ ...prev, logoUrl: data.logoUrl }))
+                
+                // Show success message with details
+                if (data.warning) {
+                    toast.success('Logo uploaded successfully (Note: ' + data.warning + ')', { duration: 5000 })
+                } else {
+                    toast.success('Logo uploaded successfully')
+                }
+                
+                // Refresh company details to get updated data
+                fetchCompanyDetails()
+            } else {
+                let errorMessage = 'Failed to upload logo'
+                try {
+                    const error = await response.json()
+                    console.error('Upload error response:', error)
+                    errorMessage = error.error || errorMessage
+                    
+                    // Provide specific guidance for common errors
+                    if (errorMessage.includes('Unauthorized')) {
+                        errorMessage = 'Authentication failed. Please try logging out and back in.'
+                    } else if (errorMessage.includes('storage')) {
+                        errorMessage = 'Storage service error. Please check your internet connection and try again.'
+                    } else if (errorMessage.includes('User not found')) {
+                        errorMessage = 'User account issue. Please refresh the page and try again.'
+                    }
+                } catch (parseError) {
+                    console.error('Failed to parse error response:', parseError)
+                }
+                
+                toast.error(errorMessage)
+            }
+        } catch (error) {
+            console.error('Error uploading logo:', error)
+            toast.error('Network error. Please check your internet connection and try again.')
+        } finally {
+            setIsUploadingLogo(false)
+        }
+    }
+
+    // Handle file input change for logo
+    const handleLogoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (file) {
+            setLogoFile(file)
+            // Create preview URL
+            const previewUrl = URL.createObjectURL(file)
+            setLogoPreview(previewUrl)
+        }
+    }
+
+    // Clear logo
+    const clearLogo = () => {
+        setLogoFile(null)
+        setLogoPreview('')
+        if (companyDetails.logoUrl) {
+            setCompanyDetails(prev => ({ ...prev, logoUrl: '' }))
+        }
+    }
+
     const handleDeleteBankDetail = async (id: string) => {
         try {
             const response = await fetch(`/api/settings/bank-details?id=${id}`, {
@@ -872,6 +984,94 @@ export default function SettingsPage() {
                                                     value={companyDetails.phone}
                                                     onChange={(e) => handleInputChange('phone', e.target.value)}
                                                 />
+                                            </div>
+                                        </div>
+
+                                        {/* Logo Upload Section */}
+                                        <div className="space-y-4 border-t pt-6">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="logo">Company Logo</Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Upload a company logo to display on invoices and documents. 
+                                                    Supported formats: JPEG, PNG, WebP, GIF. Max size: 2MB.
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-start gap-4">
+                                                {/* Logo Preview */}
+                                                <div className="flex-shrink-0">
+                                                    {(logoPreview || companyDetails.logoUrl) ? (
+                                                        <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                                                            <img
+                                                                src={logoPreview || companyDetails.logoUrl}
+                                                                alt="Company logo preview"
+                                                                className="w-full h-full object-contain bg-white"
+                                                            />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="absolute top-1 right-1 w-6 h-6 p-0"
+                                                                onClick={clearLogo}
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                                                            <div className="text-center">
+                                                                <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                                                <p className="text-xs text-gray-500">No logo</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Upload Controls */}
+                                                <div className="flex-1 space-y-3">
+                                                    <div>
+                                                        <input
+                                                            type="file"
+                                                            id="logo"
+                                                            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                                                            onChange={(e) => {
+                                                                handleLogoFileChange(e)
+                                                                if (e.target.files?.[0]) {
+                                                                    handleLogoUpload(e as any)
+                                                                }
+                                                            }}
+                                                            className="hidden"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() => document.getElementById('logo')?.click()}
+                                                            disabled={isUploadingLogo}
+                                                            className="w-full"
+                                                        >
+                                                            {isUploadingLogo ? (
+                                                                <>
+                                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                    Uploading...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ImageIcon className="w-4 h-4 mr-2" />
+                                                                    {companyDetails.logoUrl ? 'Change Logo' : 'Upload Logo'}
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                    
+                                                    {/* Current Logo URL Display */}
+                                                    {companyDetails.logoUrl && !logoPreview && (
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-muted-foreground">Current logo URL:</p>
+                                                            <p className="text-xs font-mono break-all text-blue-600 bg-blue-50 p-2 rounded border">
+                                                                {companyDetails.logoUrl}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 

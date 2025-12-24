@@ -1,54 +1,65 @@
-# Invoice 401 Error Fix Plan
+  # Company Logo Implementation Plan
 
-## Problem Analysis
-The 401 Unauthorized error occurs when accessing individual invoice pages because:
-1. The `app/invoices/[id]/page.tsx` is a server component making direct fetch calls
-2. These fetch calls don't include authentication headers that Clerk requires
-3. The API routes expect authentication but receive unauthenticated requests
+## Overview
+Add logo upload functionality to company details with Supabase file storage integration.
 
-## Solution Strategy
-Convert the invoice page to use client-side authentication with proper Clerk integration.
+## Implementation Steps
 
-## Files Modified
+### 1. Database Schema Updates
+- [ ] Add `logoUrl` field to `company_details` table
+- [ ] Generate new migration for schema changes
 
-### 1. app/invoices/[id]/page.tsx ✅ COMPLETED
-- ✅ Changed from server component to client component ('use client')
-- ✅ Imported and used `useUser` hook from `@clerk/nextjs`
-- ✅ Added proper authentication checks using `isSignedIn`
-- ✅ Removed manual token handling - Clerk handles authentication automatically
-- ✅ Added proper loading and error states
-- ✅ Improved user experience with appropriate loading states and error messages
+### 2. Supabase Configuration
+- [ ] Create Supabase client configuration
+- [ ] Set up environment variables for Supabase
+- [ ] Create file bucket for company logos if not exists
 
-## Implementation Results
+### 3. API Endpoints Enhancement
+- [x] Add logo upload functionality to company-details API
+- [x] Implement file upload to Supabase storage
+- [x] Update PUT/POST endpoints to handle logoUrl
+- [x] Add file validation (size, format)
+- [x] Create dedicated upload-logo API endpoint
 
-### ✅ Step 1: Update Invoice Page Component
-- Changed 'use server' to 'use client' at top
-- Imported `useUser` hook from `@clerk/nextjs`
-- Added authentication check at component level using `isSignedIn`
-- Removed manual auth token handling - Clerk middleware handles this automatically
-- Added proper loading and error handling
+### 4. UI Components Update
+- [x] Add logo upload component to settings page
+- [x] Create image preview functionality
+- [x] Add drag-and-drop file upload interface
+- [x] Implement file validation on client side
 
-### ✅ Step 2: Authentication Flow
-- Verified user is properly authenticated before making API calls
-- Test both signed-in and signed-out scenarios
-- Added appropriate error messages for authentication failures
+### 5. Integration Points
+- [x] Update InvoicePdf component to display logo
+- [x] Update invoice display pages to show logo
 
-### ✅ Step 3: Final State
-- Removed unnecessary `isLoaded` checks
-- Simplified authentication logic to match working pages like `app/invoices/page.tsx`
-- Clean, maintainable code that follows project patterns
+### 6. Error Handling & UX
+- [ ] Add loading states during upload
+- [ ] Implement error handling for failed uploads
+- [ ] Add success notifications
+- [ ] Implement image optimization/resizing
 
-## Expected Outcome ✅ ACHIEVED
-- Invoice pages should load successfully when user is authenticated
-- 401 errors should be replaced with proper authentication checks
-- Better user experience with appropriate loading states
+### 7. Testing
+- [ ] Test logo upload functionality
+- [ ] Test logo display in invoices
+- [ ] Test responsive design
+- [ ] Test file validation
 
-## Success Criteria ✅ ACHIEVED
-- ✅ No more 401 errors when accessing individual invoices
-- ✅ Proper authentication flow maintained
-- ✅ User-friendly error messages for unauthorized access
-- ✅ Loading states for better UX
-- ✅ Code follows project patterns and conventions
+## Technical Details
 
-## Summary
-The 401 Unauthorized error has been successfully resolved by converting the invoice detail page from a server component to a client component and using the proper `useUser` hook from Clerk. The page now properly handles authentication states and provides a better user experience with appropriate loading and error states.
+### Files to Modify:
+1. `/db/schema.ts` - Add logoUrl field
+2. `/lib/supabase.ts` - Create Supabase client (new file)
+3. `/app/api/settings/company-details/route.ts` - Handle logo upload
+4. `/app/settings/page.tsx` - Add logo upload UI
+5. `/app/_components/InvoicePdf.tsx` - Display logo
+6. `/app/_components/InvoiceHeader.tsx` - Display logo
+7. Environment variables setup
+
+### Dependencies:
+- Supabase client (already installed)
+- File upload handling
+- Image validation and processing
+
+### Storage Structure:
+- Bucket: `company-logos`
+- Path: `{orgId}/{companyId}/logo.{extension}`
+- Public access for logo images

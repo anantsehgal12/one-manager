@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { companyDetailsTable, usersTable } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getCurrentUserId, getCurrentOrgId } from '@/lib/auth';
+import { uploadLogo, deleteLogo, validateImageFile } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
     try {
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
             pan, 
             email, 
             phone, 
+            logoFile,
             isDefault 
         } = body;
 
@@ -152,6 +154,7 @@ export async function PUT(request: NextRequest) {
             pan, 
             email, 
             phone, 
+            logoFile,
             isDefault 
         } = body;
 
@@ -199,6 +202,7 @@ export async function PUT(request: NextRequest) {
                 ...(pan !== undefined && { pan }),
                 ...(email !== undefined && { email }),
                 ...(phone !== undefined && { phone }),
+                ...(logoFile !== undefined && { logoUrl: logoFile }),
                 ...(typeof isDefault === 'boolean' && { isDefault }),
                 updatedAt: new Date()
             })

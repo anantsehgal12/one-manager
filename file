@@ -1,0 +1,311 @@
+import React from 'react'
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet
+} from '@react-pdf/renderer'
+
+/* =========================
+   Types
+========================= */
+
+export interface RegencyInvoiceItem {
+  id: string
+  name: string
+  sacCode: string
+  rate: number
+  quantity: number
+  taxableValue: number
+  taxAmount: number
+  taxPercentage: number
+  totalAmount: number
+}
+
+export interface RegencyInvoiceData {
+  invoiceNumber: string
+  invoiceDate: string
+  dueDate: string
+
+  seller: {
+    name: string
+    gstin: string
+    addressLines: string[]
+    cityStatePincode: string
+    mobile: string
+  }
+
+  customer: {
+    legalName: string
+    tradeName: string
+    gstin: string
+    billingAddressLines: string[]
+    cityStatePincode: string
+    placeOfSupply: string
+  }
+
+  items: RegencyInvoiceItem[]
+
+  subtotal: number
+  cgstRate: number
+  sgstRate: number
+  cgstAmount: number
+  sgstAmount: number
+  totalAmount: number
+
+  bank: {
+    bankName: string
+    accountNumber: string
+    ifsc: string
+    branch: string
+  }
+}
+
+/* =========================
+   Helpers
+========================= */
+
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+
+const money = (n: number) => `₹${n.toFixed(2)}`
+
+const numberToWords = (num: number): string => {
+  const a = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
+    'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve',
+    'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+    'Seventeen', 'Eighteen', 'Nineteen'
+  ]
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+
+  const inWords = (n: number): string => {
+    if (n < 20) return a[n]
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '')
+    if (n < 1000)
+      return a[Math.floor(n / 100)] + ' Hundred ' + inWords(n % 100)
+    if (n < 100000)
+      return inWords(Math.floor(n / 1000)) + ' Thousand ' + inWords(n % 1000)
+    return inWords(Math.floor(n / 100000)) + ' Lakh ' + inWords(n % 100000)
+  }
+
+  return inWords(Math.floor(num)).trim()
+}
+
+/* =========================
+   Styles
+========================= */
+const styles = StyleSheet.create({
+  page: {
+    padding: 30,
+    fontSize: 10,
+    fontFamily: 'Helvetica'
+  },
+
+  title: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 12
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10
+  },
+
+  sellerBlock: {
+    marginBottom: 12
+  },
+
+  bold: { fontWeight: 'bold' },
+
+  section: {
+    marginBottom: 10
+  },
+
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottom: '1px solid #000',
+    paddingBottom: 4,
+    marginTop: 10
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 4,
+    borderBottom: '0.5px solid #ddd'
+  },
+
+  colS: { width: '5%', textAlign: 'center' },
+  colL: { width: '35%' },
+  colM: { width: '15%', textAlign: 'right' },
+
+  totalsBox: {
+    marginLeft: 'auto',
+    width: 220,
+    marginTop: 10
+  },
+
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 2
+  },
+
+  bankBox: {
+    marginTop: 15,
+    borderTop: '1px solid #000',
+    paddingTop: 8
+  },
+
+  footer: {
+    marginTop: 25,
+    fontSize: 8,
+    textAlign: 'center',
+    color: '#666'
+  }
+})
+/* =========================
+   Component
+========================= */
+
+export const RegencyInvoicePdf: React.FC<{ data: RegencyInvoiceData }> = ({ data }) => {
+  const totalQty = data.items.reduce((s, i) => s + i.quantity, 0)
+
+  return (
+    <main>
+    <Document>
+      <Page size="A4" style={styles.page}>
+
+        <Text style={styles.title}>TAX INVOICE</Text>
+        <Text style={styles.subtitle}>Original For Recipient</Text>
+
+        {/* Seller */}
+        <View style={styles.sellerBlock}>
+          <Text style={styles.bold}>M/S {data.seller.name}</Text>
+          <Text>GSTIN {data.seller.gstin}</Text>
+          {data.seller.addressLines.map((l, i) => (
+            <Text key={i}>{l}</Text>
+          ))}
+          <Text>{data.seller.cityStatePincode}</Text>
+          <Text>Mobile {data.seller.mobile}</Text>
+        </View>
+
+        {/* Invoice Meta */}
+        <View style={styles.headerRow}>
+          <Text>Invoice #: {data.invoiceNumber}</Text>
+          <Text>Invoice Date: {formatDate(data.invoiceDate)}</Text>
+          <Text>Due Date: {formatDate(data.dueDate)}</Text>
+        </View>
+
+        {/* Customer */}
+        <View style={styles.section}>
+          <Text style={styles.bold}>Customer Details:</Text>
+          <Text>{data.customer.tradeName}</Text>
+          <Text>{data.customer.legalName}</Text>
+          <Text>GSTIN: {data.customer.gstin}</Text>
+          {data.customer.billingAddressLines.map((l, i) => (
+            <Text key={i}>{l}</Text>
+          ))}
+          <Text>{data.customer.cityStatePincode}</Text>
+          <Text>Place of Supply: {data.customer.placeOfSupply}</Text>
+        </View>
+
+        {/* Table */}
+        <View>
+          <View style={styles.tableHeader}>
+            <Text style={styles.colS}>#</Text>
+            <Text style={styles.colL}>Item</Text>
+            <Text style={styles.colM}>Rate</Text>
+            <Text style={styles.colM}>Qty</Text>
+            <Text style={styles.colM}>Taxable</Text>
+            <Text style={styles.colM}>Tax</Text>
+            <Text style={styles.colM}>Amount</Text>
+          </View>
+
+          {data.items.map((it, i) => (
+            <View key={it.id} style={styles.tableRow}>
+              <Text style={styles.colS}>{i + 1}</Text>
+              <View style={styles.colL}>
+                <Text style={styles.bold}>{it.name}</Text>
+                <Text>SAC: {it.sacCode}</Text>
+              </View>
+              <Text style={styles.colM}>{money(it.rate)}</Text>
+              <Text style={styles.colM}>{it.quantity}</Text>
+              <Text style={styles.colM}>{money(it.taxableValue)}</Text>
+              <Text style={styles.colM}>
+                {money(it.taxAmount)} ({it.taxPercentage}%)
+              </Text>
+              <Text style={styles.colM}>{money(it.totalAmount)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Totals */}
+        <View style={styles.totalsBox}>
+          <View style={styles.totalRow}>
+            <Text>Taxable Amount</Text>
+            <Text>{money(data.subtotal)}</Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text>CGST {data.cgstRate}%</Text>
+            <Text>{money(data.cgstAmount)}</Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text>SGST {data.sgstRate}%</Text>
+            <Text>{money(data.sgstAmount)}</Text>
+          </View>
+          <View style={[styles.totalRow, styles.bold]}>
+            <Text>Total</Text>
+            <Text>{money(data.totalAmount)}</Text>
+          </View>
+        </View>
+
+        {/* Summary */}
+        <View style={styles.section}>
+          <Text>
+            Total Items / Qty : {data.items.length} / {totalQty}
+          </Text>
+          <Text>
+            Total amount (in words): INR {numberToWords(data.totalAmount)} Only.
+          </Text>
+          <Text>Amount Paid</Text>
+        </View>
+
+        {/* Bank */}
+        <View style={styles.bankBox}>
+          <Text style={styles.bold}>Bank Details:</Text>
+          <Text>Bank: {data.bank.bankName}</Text>
+          <Text>Account #: {data.bank.accountNumber}</Text>
+          <Text>IFSC Code: {data.bank.ifsc}</Text>
+          <Text>Branch: {data.bank.branch}</Text>
+        </View>
+
+        {/* Footer */}
+        <Text style={styles.footer}>
+          For M/S {data.seller.name}
+          {"\n"}Authorized Signatory
+          {"\n\n"}
+          Swipe | Simple Invoicing, Billing and Payments | Visit getswipe.in
+          {"\n"}
+          Page 1 / 1 • This is a digitally signed document.
+          {"\n"}
+          Powered By
+        </Text>
+
+      </Page>
+    </Document>
+    </main>
+  )
+}
+
+export default RegencyInvoicePdf

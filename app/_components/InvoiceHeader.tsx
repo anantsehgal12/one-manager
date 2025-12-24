@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SignIn } from '@clerk/nextjs'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import Image from 'next/image'
 
 interface InvoiceHeaderProps {
   isSignedIn?: boolean
@@ -21,6 +22,7 @@ interface InvoiceHeaderProps {
 interface CompanyDetail {
   companyName: string
   legalName?: string
+  logoUrl?: string
 }
 
 interface DocumentSetting {
@@ -39,6 +41,7 @@ export default function InvoiceHeader({
 }: InvoiceHeaderProps) {
   const router = useRouter()
   const [companyName, setCompanyName] = useState<string>('')
+  const [companyLogo, setCompanyLogo] = useState<string>('')
   const [prefix, setPrefix] = useState<string>(invoicePrefix)
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState<string>(invoiceNumber)
   const [isLoadingSettings, setIsLoadingSettings] = useState(true)
@@ -54,6 +57,7 @@ export default function InvoiceHeader({
           if (companyData && companyData.length > 0) {
             const defaultCompany = companyData.find((c: CompanyDetail) => c.companyName)
             setCompanyName(defaultCompany?.companyName || '')
+            setCompanyLogo(defaultCompany?.logoUrl || '')
           }
         }
 

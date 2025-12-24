@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { invoicesTable, invoiceItemsTable, clientsTable, companyDetailsTable, bankDetailsTable } from '@/db/schema';
+import { invoicesTable, invoiceItemsTable, clientsTable, companyDetailsTable, bankDetailsTable, usersTable } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { getCurrentUserId } from '@/lib/auth';
+import { getCurrentOrgId, getCurrentUserId } from '@/lib/auth';
 
 // GET /api/invoices/[id] - Get a single invoice with all related data
 export async function GET(
@@ -91,7 +91,24 @@ export async function GET(
       .where(eq(invoiceItemsTable.invoiceId, id))
       .orderBy(invoiceItemsTable.createdAt);
 
-    // Fetch company details
+    // Get current authenticated user ID (same as Settings page uses)
+    const currentUserId = await getCurrentUserId();
+    const currentOrgId = await getCurrentOrgId();
+
+    if (!currentUserId || !currentOrgId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get the current user's internal ID from our users table
+    const currentUser = await db.query.usersTable.findFirst({
+      where: eq(usersTable.clerkUserId, currentUserId)
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Fetch company details using current authenticated user (same as Settings page)
     const companyData = await db
       .select({
         companyName: companyDetailsTable.companyName,
@@ -104,12 +121,16 @@ export async function GET(
         pan: companyDetailsTable.pan,
         email: companyDetailsTable.email,
         phone: companyDetailsTable.phone,
+        logoUrl: companyDetailsTable.logoUrl,
       })
       .from(companyDetailsTable)
-      .where(eq(companyDetailsTable.userId, invoice.userId))
+      .where(and(
+        eq(companyDetailsTable.userId, currentUser.id),
+        eq(companyDetailsTable.orgId, currentOrgId)
+      ))
       .limit(1);
 
-    // Fetch bank details
+    // Fetch bank details using current authenticated user (same as Settings page)
     const bankData = await db
       .select({
         accountHolderName: bankDetailsTable.accountHolderName,
@@ -120,7 +141,10 @@ export async function GET(
         upiId: bankDetailsTable.upiId,
       })
       .from(bankDetailsTable)
-      .where(eq(bankDetailsTable.userId, invoice.userId))
+      .where(and(
+        eq(bankDetailsTable.userId, currentUser.id),
+        eq(bankDetailsTable.orgId, currentOrgId)
+      ))
       .limit(1);
 
     const company = companyData[0] || {};
