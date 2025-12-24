@@ -102,7 +102,6 @@ export default function InvoiceHeader({
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-xl font-semibold">Create Invoice</h1>
           </div>
         </div>
       </header>
@@ -132,7 +131,7 @@ export default function InvoiceHeader({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.back()}
+                onClick={() => router.push('/invoices')}
                 className="p-2"
               >
                 <ArrowLeft className="h-4 w-4" />

@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       totalAmount,
       balanceAmount,
       status,
+      signatureId,
     } = body
 
     // Validate required fields
@@ -113,51 +114,59 @@ export async function POST(request: NextRequest) {
       )
     }
 
-
     // Get orgId for the user
     const orgId = await getCurrentOrgId()
 
+    if (!orgId) {
+      return NextResponse.json(
+        { error: 'Organization ID not found' },
+        { status: 400 }
+      )
+    }
 
-    // Create the invoice
+    // Create the invoice with proper typing
+    const invoiceData = {
+      userId,
+      orgId,
+      clientId,
+      invoiceNumber,
+      invoiceDate: new Date(invoiceDate),
+      dueDate: dueDate ? new Date(dueDate) : null,
+      referenceNumber: referenceNumber ? referenceNumber : null,
+      subtotal,
+      taxAmount: taxAmount || '0.00',
+      totalAmount,
+      balanceAmount,
+      status: status || 'draft',
+      notes: notes ? notes : null,
+      termsConditions: termsConditions ? termsConditions : null,
+    }
+
     const [newInvoice] = await db
       .insert(invoicesTable)
-      .values({
-        userId,
-        orgId,
-        clientId,
-        invoiceNumber,
-        invoiceDate: new Date(invoiceDate),
-        dueDate: dueDate ? new Date(dueDate) : null,
-        referenceNumber,
-        subtotal: subtotal,
-        taxAmount: taxAmount,
-        totalAmount: totalAmount,
-        balanceAmount: balanceAmount,
-        status: status || 'draft',
-        notes,
-        termsConditions,
-      })
+      .values(invoiceData)
       .returning()
 
     // Create invoice items
+    const invoiceItemsData = items.map((item: any) => ({
+      invoiceId: newInvoice.id,
+      productId: item.productId || null,
+      itemName: item.itemName,
+      description: item.description || null,
+      quantity: item.quantity,
+      rate: item.rate,
+      taxPercentage: item.taxPercentage,
+      taxAmount: (item.quantity * item.rate * parseFloat(item.taxPercentage) / 100).toFixed(2),
+      totalAmount: (item.quantity * item.rate * (1 + parseFloat(item.taxPercentage) / 100)).toFixed(2),
+      hsnSacCode: item.hsnSacCode || null,
+    }))
+
     const invoiceItems = await Promise.all(
-      items.map(async (item: any) => {
+      invoiceItemsData.map(async (itemData: any) => {
         const [newItem] = await db
           .insert(invoiceItemsTable)
-          .values({
-            invoiceId: newInvoice.id,
-            productId: item.productId || null,
-            itemName: item.itemName,
-            description: item.description,
-            quantity: item.quantity,
-            rate: item.rate,
-            taxPercentage: item.taxPercentage,
-            taxAmount: (item.quantity * item.rate * parseFloat(item.taxPercentage) / 100).toFixed(2),
-            totalAmount: (item.quantity * item.rate * (1 + parseFloat(item.taxPercentage) / 100)).toFixed(2),
-            hsnSacCode: item.hsnSacCode,
-          })
+          .values(itemData)
           .returning()
-        
         return newItem
       })
     )

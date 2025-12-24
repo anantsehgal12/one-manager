@@ -25,8 +25,9 @@ import {
 
 import { toast } from 'react-hot-toast'
 import { SignIn, useUser } from '@clerk/nextjs'
-import { Plus } from 'lucide-react'
+import { CirclePlus, Plus } from 'lucide-react'
 import InvoiceHeader from '@/app/_components/InvoiceHeader'
+import Link from 'next/link'
 
 // Invoice item schema
 const invoiceItemSchema = z.object({
@@ -50,6 +51,7 @@ const invoiceSchema = z.object({
   notes: z.string().optional(),
   termsConditions: z.string().optional(),
   bankDetailsId: z.string().optional(),
+  signatureId: z.string().optional(),
 }).refine((data) => {
   // This will be handled by the component that checks selectedProducts
   return true
@@ -87,6 +89,13 @@ interface BankDetail {
   isDefault: boolean
 }
 
+interface Signature {
+  id: string
+  name: string
+  imageUrl: string
+  isDefault: boolean
+}
+
 export default function CreateInvoicePage() {
   const router = useRouter()
   const { isSignedIn } = useUser()
@@ -96,6 +105,8 @@ export default function CreateInvoicePage() {
   const [loadingData, setLoadingData] = useState(true)
   const [bankDetails, setBankDetails] = useState<BankDetail[]>([])
   const [loadingBankDetails, setLoadingBankDetails] = useState(true)
+  const [signatures, setSignatures] = useState<Signature[]>([])
+  const [loadingSignatures, setLoadingSignatures] = useState(true)
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
@@ -109,6 +120,7 @@ export default function CreateInvoicePage() {
       notes: '',
       termsConditions: '',
       bankDetailsId: '',
+      signatureId: '',
     },
   })
 
@@ -157,6 +169,29 @@ export default function CreateInvoicePage() {
 
     if (isSignedIn) {
       loadBankDetails()
+    }
+  }, [isSignedIn])
+
+  // Load signatures
+  useEffect(() => {
+    const loadSignatures = async () => {
+      try {
+        const signaturesResponse = await fetch('/api/settings/signatures')
+
+        if (signaturesResponse.ok) {
+          const signaturesData = await signaturesResponse.json()
+          setSignatures(signaturesData)
+        }
+      } catch (error) {
+        console.error('Failed to load signatures:', error)
+        // Don't show error toast for signatures as it's not critical
+      } finally {
+        setLoadingSignatures(false)
+      }
+    }
+
+    if (isSignedIn) {
+      loadSignatures()
     }
   }, [isSignedIn])
 
@@ -242,12 +277,12 @@ export default function CreateInvoicePage() {
         items: invoiceItems,
         invoiceDate: data.invoiceDate.toISOString().split('T')[0],
         dueDate: data.dueDate?.toISOString().split('T')[0] || data.invoiceDate.toISOString().split('T')[0],
-        taxableValue: taxableValue.toFixed(2),
+        subtotal: taxableValue.toFixed(2),
         taxAmount: taxAmount.toFixed(2),
-        totalDiscount: totalDiscount.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
         balanceAmount: totalAmount.toFixed(2),
         status: 'draft',
+        signatureId: data.signatureId || null,
       }
 
       const response = await fetch('/api/invoices', {
@@ -384,7 +419,7 @@ export default function CreateInvoicePage() {
                               date={field.value}
                               onSelect={field.onChange}
                               placeholder="Select invoice date"
-                              className='md:w-70 sm:w-70'
+                              className='lg:w-60 md:w-70 sm:w-70'
                             />
                           </FormControl>
                           <FormMessage />
@@ -401,7 +436,7 @@ export default function CreateInvoicePage() {
                           <FormControl>
                             <DatePicker
                               date={field.value}
-                              className='md:w-70 sm:w-70'
+                              className='lg:w-60 md:w-70 sm:w-70'
                               onSelect={field.onChange}
                               placeholder="Select due date"
                             />
@@ -419,7 +454,7 @@ export default function CreateInvoicePage() {
                       <FormItem>
                         <FormLabel>Reference Number</FormLabel>
                         <FormControl>
-                          <Input placeholder="Reference" className='w-80' {...field} />
+                          <Input placeholder="Reference" className='w-60' {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -445,22 +480,26 @@ export default function CreateInvoicePage() {
               </CardContent>
             </Card>
             <div className='inline-flex gap-5 w-full h-full'>
-              <div className='flex flex-col gap-5 w-[50%] h-full'>
+              <div className='flex flex-col gap-5 w-[50%]  h-[619px]'>
                 {/* Additional Information */}
-                <Card className='h-full'>
-                  <CardHeader>
+                <Card className='h-full flex flex-col'>
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle>Additional Information</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4 h-full">
+                  <CardContent className="space-y-4 flex-1 flex flex-col">
                     <FormField
                       control={form.control}
 
                       name="notes"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex-1 flex flex-col">
                           <FormLabel>Notes</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Additional notes" className='h-40' {...field} />
+                          <FormControl className="flex-1">
+                            <Textarea 
+                              placeholder="Additional notes" 
+                              className='h-full min-h-[200px] resize-none' 
+                              {...field} 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -471,10 +510,14 @@ export default function CreateInvoicePage() {
                       control={form.control}
                       name="termsConditions"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex-1 flex flex-col">
                           <FormLabel>Terms & Conditions</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Terms and conditions"className='h-39' {...field} />
+                          <FormControl className="flex-1">
+                            <Textarea 
+                              placeholder="Terms and conditions" 
+                              className='h-full min-h-[200px] resize-none' 
+                              {...field} 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -515,10 +558,27 @@ export default function CreateInvoicePage() {
                 {/* Bank Details Selection */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Bank Details</CardTitle>
-                    <CardDescription>Select bank details to be printed on the invoice</CardDescription>
+                    <div className='flex justify-between items-center'>
+                    <div className='flex flex-col gap-2'>
+                      <CardTitle>Bank Details</CardTitle>
+                      <CardDescription>Select bank details</CardDescription>
+                    </div>
+                    <div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <span>
+                          <Link href="/settings" className='flex items-center gap-2'>
+                            <CirclePlus className="mr-2 h-4 w-4" />
+                            Add Your Bank Account?
+                          </Link>
+                        </span>
+                      </Button>
+                    </div>
+                    </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
                     <FormField
                       control={form.control}
                       name="bankDetailsId"
@@ -556,21 +616,67 @@ export default function CreateInvoicePage() {
                         </FormItem>
                       )}
                     />
-                    {bankDetails.length === 0 && !loadingBankDetails && (
-                      <div className="mt-4 p-4 border border-dashed border-muted-foreground/25 rounded-lg text-center">
-                        <p className="text-sm text-muted-foreground">
-                          No bank details found.
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="p-0 h-auto ml-1"
-                            onClick={() => router.push('/settings')}
-                          >
-                            Add bank details in settings
-                          </Button>
-                        </p>
-                      </div>
-                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className='flex justify-between items-center'>
+                    <div className='flex flex-col gap-2'>
+                      <CardTitle>Signature</CardTitle>
+                      <CardDescription>Select signature for the document</CardDescription>
+                    </div>
+                    <div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                      >
+                        <span>
+                          <Link href="/settings" className='flex items-center gap-2'>
+                            <CirclePlus className="mr-2 h-4 w-4" />
+                            Add Your Signature?
+                          </Link>
+                        </span>
+                      </Button>
+                    </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="signatureId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Signature</FormLabel>
+                          <FormControl>
+                            <Select
+                              value={field.value || "none"}
+                              onValueChange={(value) => {
+                                field.onChange(value === "none" ? "" : value)
+                              }}
+                              disabled={loadingSignatures}
+                            >
+                              <SelectTrigger className='w-full'>
+                                <SelectValue placeholder={loadingSignatures ? "Loading signatures..." : "Select signature"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No signature</SelectItem>
+                                {signatures.map((signature) => (
+                                  <SelectItem key={signature.id} value={signature.id}>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{signature.name}</span>
+                                      {signature.isDefault && <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Default</span>}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                   </CardContent>
                 </Card>
               </div>

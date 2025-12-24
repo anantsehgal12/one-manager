@@ -104,18 +104,24 @@ export function ProductDropdown({ products, selectedProducts, onProductsChange, 
       }
       onProductsChange([...selectedProducts, newProduct])
     }
+    
+    // Close the popup after selecting a product
+    setOpen(false)
   }
 
-  // Update quantity for selected product
+  // Update quantity for selected product (during typing, don't remove)
   const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      // Remove product if quantity is 0 or negative
+    const updatedProducts = selectedProducts.map(p =>
+      p.id === productId ? { ...p, quantity } : p
+    )
+    onProductsChange(updatedProducts)
+  }
+
+  // Handle quantity field blur - remove product if quantity is 0 or empty
+  const handleQuantityBlur = (productId: string, quantity: number) => {
+    if (quantity <= 0 || isNaN(quantity)) {
+      // Remove product if quantity is 0, negative, or invalid
       onProductsChange(selectedProducts.filter(p => p.id !== productId))
-    } else {
-      const updatedProducts = selectedProducts.map(p =>
-        p.id === productId ? { ...p, quantity } : p
-      )
-      onProductsChange(updatedProducts)
     }
   }
 
@@ -373,6 +379,7 @@ export function ProductDropdown({ products, selectedProducts, onProductsChange, 
                             type="number"
                             value={quantity}
                             onChange={(e) => updateQuantity(product.id, parseFloat(e.target.value) || 0)}
+                            onBlur={(e) => handleQuantityBlur(product.id, parseFloat(e.target.value) || 0)}
                             className="h-8 pr-8 text-right"
                             min="1"
                             step="1"

@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const clientId = params.id
+    const clientId = (await params).id
 
     if (!clientId) {
       return NextResponse.json({ error: 'Client ID is required' }, { status: 400 })
@@ -25,6 +25,7 @@ export async function GET(
     // Get all invoices for this client
     const clientInvoices = await db
       .select({
+        invoiceDate: invoicesTable.invoiceDate,
         totalAmount: invoicesTable.totalAmount,
         paidAmount: invoicesTable.paidAmount,
         balanceAmount: invoicesTable.balanceAmount,
@@ -81,7 +82,7 @@ export async function GET(
       totalPaid,
       activeInvoices: activeInvoices.length,
       overdueInvoices: overdueInvoices.length,
-      lastInvoiceDate: clientInvoices.length > 0 ? clientInvoices[0].invoiceDate : null
+      lastInvoiceDate: clientInvoices.length > 0 ? (clientInvoices[0] as any).invoiceDate : null
     })
 
   } catch (error) {

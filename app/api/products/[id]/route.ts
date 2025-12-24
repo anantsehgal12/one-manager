@@ -3,21 +3,14 @@ import { db } from '@/db'
 import { productsTable } from '@/db/schema'
 import { getCurrentUserId, getCurrentOrgId } from '@/lib/auth'
 
-import { eq } from 'drizzle-orm'
-
-async function resolveParams(context: any) {
-  if (!context) return {};
-  const p = context.params;
-  return p instanceof Promise ? await p : p;
-}
+import { eq, and } from 'drizzle-orm'
 
 export async function GET(
   request: NextRequest,
-  context: any
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await resolveParams(context);
-    const { id } = params
+    const { id } = await params
     const userId = await getCurrentUserId()
     const orgId = await getCurrentOrgId()
 
@@ -40,8 +33,7 @@ export async function GET(
         updatedAt: productsTable.updatedAt,
       })
       .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .where(eq(productsTable.orgId, orgId))
+      .where(and(eq(productsTable.id, id), eq(productsTable.orgId, orgId)))
       .limit(1)
 
     if (!product) {
@@ -57,11 +49,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  context: any
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await resolveParams(context);
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     console.log('Received PATCH request body:', body)
     
@@ -87,8 +78,7 @@ export async function PATCH(
     const [existingProduct] = await db
       .select()
       .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .where(eq(productsTable.orgId, orgId))
+      .where(and(eq(productsTable.id, id), eq(productsTable.orgId, orgId)))
       .limit(1)
 
     if (!existingProduct) {
@@ -112,8 +102,7 @@ export async function PATCH(
     const [updatedProduct] = await db
       .update(productsTable)
       .set(updateData)
-      .where(eq(productsTable.id, id))
-      .where(eq(productsTable.orgId, orgId))
+      .where(and(eq(productsTable.id, id), eq(productsTable.orgId, orgId)))
       .returning()
 
     console.log('Product updated successfully:', updatedProduct)
@@ -129,11 +118,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  context: any
+  { params }: { params: { id: string } }
 ) {
   try {
-    const params = await resolveParams(context);
-    const { id } = params
+    const { id } = await params
     const userId = await getCurrentUserId()
     const orgId = await getCurrentOrgId()
 
@@ -145,8 +133,7 @@ export async function DELETE(
     const [existingProduct] = await db
       .select()
       .from(productsTable)
-      .where(eq(productsTable.id, id))
-      .where(eq(productsTable.orgId, orgId))
+      .where(and(eq(productsTable.id, id), eq(productsTable.orgId, orgId)))
       .limit(1)
 
     if (!existingProduct) {
@@ -156,8 +143,7 @@ export async function DELETE(
     // Delete the product
     await db
       .delete(productsTable)
-      .where(eq(productsTable.id, id))
-      .where(eq(productsTable.orgId, orgId))
+      .where(and(eq(productsTable.id, id), eq(productsTable.orgId, orgId)))
 
     console.log('Product deleted successfully:', id)
     return NextResponse.json({ message: 'Product deleted successfully' })

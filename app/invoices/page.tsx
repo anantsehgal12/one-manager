@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -222,8 +223,10 @@ export default function InvoicesPage() {
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex items-center justify-end space-x-2">
-                                                                <Button variant="outline" size="sm">
-                                                                    <Eye className="h-4 w-4" />
+                                                                <Button variant="outline" size="sm" asChild>
+                                                                    <Link href={`/invoices/${invoice.id}`}>
+                                                                        <Eye className="h-4 w-4" />
+                                                                    </Link>
                                                                 </Button>
                                                                 <Button variant="outline" size="sm">
                                                                     <Edit className="h-4 w-4" />
