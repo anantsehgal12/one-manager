@@ -15,6 +15,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const orgId = await getCurrentOrgId()
+
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organization ID not found' }, { status: 400 })
+    }
+
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') || '1')
     const limit = parseInt(url.searchParams.get('limit') || '10')
@@ -23,7 +29,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     // Build query conditions
-    let whereConditions = [eq(invoicesTable.userId, userId)]
+    let whereConditions = [eq(invoicesTable.orgId, orgId)]
     
     if (status) {
       whereConditions.push(eq(invoicesTable.status, status))

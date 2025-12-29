@@ -11,7 +11,7 @@ export default function Page() {
   if (isSignedIn) {
     return (
       <>
-      <Side/>
+      <Side />
       <SidebarInset>
        <Header />
           <main className="flex-1 px-15 py-5 w-full">
