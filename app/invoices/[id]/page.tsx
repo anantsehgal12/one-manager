@@ -3,15 +3,15 @@
 
 import React from 'react'
 import Image from 'next/image'
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card" // Keep these imports for now, might remove later if not used
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table" // Keep these imports for now, might remove later if not used
 import { Button } from "@/components/ui/button"
 import { useUser } from '@clerk/nextjs'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import { useParams, useRouter } from 'next/navigation'
 import { Download, FileText } from 'lucide-react'
-import html2canvas from 'html2canvas-pro' // Changed from 'html2canvas'
+import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 
 interface InvoiceData {
@@ -115,7 +115,14 @@ function convertToWords(amount: number): string {
     return convert(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 !== 0 ? ' ' + convert(n % 10000000) : '')
   }
   
-  return convert(Math.floor(amount))
+  const amountInWords = convert(Math.floor(amount));
+  const decimalPart = Math.round((amount - Math.floor(amount)) * 100);
+  
+  if (decimalPart > 0) {
+    return `INR ${amountInWords} and ${convert(decimalPart)} Paisa Only.`;
+  }
+  
+  return `INR ${amountInWords} Only.`;
 }
 
 
@@ -271,289 +278,279 @@ export default function InvoicePage() {
   
   const totalItems = invoice.items.length
   const totalQuantity = invoice.items.reduce((sum, item) => sum + parseFloat(item.quantity), 0)
-  if(isSignedIn){
-    <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-8">
-
-      <div className="flex justify-between items-start border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold">TAX INVOICE</h1>
-          <p className="text-sm text-gray-600">Original for Recipient</p>
-        </div>
-        <div className="text-right text-sm">
-          <p><span className="font-semibold">Invoice #:</span> IN/AS/2025-26/32</p>
-          <p><span className="font-semibold">Invoice Date:</span> 23 Dec 2025</p>
-          <p><span className="font-semibold">Due Date:</span> 23 Dec 2025</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6 mt-6 text-sm">
-        <div>
-          <h2 className="font-semibold mb-1">From:</h2>
-          <p className="font-bold">M/S ANANT SALES</p>
-          <p>GSTIN: 09FSUPS0928G1Z0</p>
-          <p>229, Chandel Market</p>
-          <p>Harjinder Nagar, Lal Bangla</p>
-          <p>Kanpur Nagar, Uttar Pradesh - 208007</p>
-          <p>Mobile: +91 8318383377</p>
-        </div>
-
-        <div>
-          <h2 className="font-semibold mb-1">Bill To:</h2>
-          <p className="font-bold">Sample</p>
-          <p>GSTIN: 29AAABC0926D1A0</p>
-          <p>Place of Supply: 09 - Uttar Pradesh</p>
-        </div>
-      </div>
-
-      <div className="mt-8 overflow-x-auto">
-        <table className="w-full border border-gray-300 text-sm">
-          <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-3 py-2">#</th>
-            <th className="border px-3 py-2 text-left">Item</th>
-            <th className="border px-3 py-2">Rate</th>
-            <th className="border px-3 py-2">Qty</th>
-            <th className="border px-3 py-2">Taxable Value</th>
-            <th className="border px-3 py-2">Tax</th>
-            <th className="border px-3 py-2">Amount</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr>
-            <td className="border px-3 py-2 text-center">1</td>
-            <td className="border px-3 py-2">
-              <p className="font-medium">Sample Product</p>
-              <p className="text-xs text-gray-500">HSN: 00000000</p>
-            </td>
-            <td className="border px-3 py-2 text-center">₹100.00</td>
-            <td className="border px-3 py-2 text-center">1</td>
-            <td className="border px-3 py-2 text-center">₹100.00</td>
-            <td className="border px-3 py-2 text-center">₹0.00 (0%)</td>
-            <td className="border px-3 py-2 text-center">₹100.00</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-
-
-      <div className="flex justify-end mt-6">
-        <div className="w-full md:w-1/2 text-sm">
-          <div className="flex justify-between py-1">
-            <span>Taxable Amount</span>
-            <span>₹100.00</span>
-          </div>
-          <div className="flex justify-between py-1 font-semibold border-t mt-2">
-            <span>Total</span>
-            <span>₹100.00</span>
-          </div>
-        </div>
-      </div>
-
-
-      <div className="mt-4 text-sm">
-        <p><span className="font-semibold">Total Items / Qty:</span> 1 / 1</p>
-        <p><span className="font-semibold">Amount (in words):</span> INR One Hundred Rupees Only</p>
-      </div>
-
-      <div className="mt-6 text-sm border-t pt-4">
-        <h3 className="font-semibold mb-2">Bank Details</h3>
-        <p>Bank: Indian Bank</p>
-        <p>Account No: 50283668483</p>
-        <p>IFSC: IDIB000K580</p>
-        <p>Branch: Kanpur Chakeri</p>
-      </div>
-
-      <div className="flex justify-between items-end mt-8 text-sm">
-        <div>
-          <p className="font-semibold">Notes:</p>
-          <p className="text-gray-600">Notes are here</p>
-        </div>
-        <div className="text-right">
-          <p className="font-semibold">For M/S ANANT SALES</p>
-          <p className="mt-8">Authorized Signatory</p>
-        </div>
-      </div>
-
-      <div className="mt-6 text-xs text-gray-500 text-center border-t pt-3">
-        This is a digitally signed document.<br>
-        Powered by Swipe | Simple Invoicing, Billing and Payments
-      </div>
-
-    </div>
-  }  
+  
+  // Calculate CGST and SGST assuming a 50/50 split of total tax amount
+  const totalTaxAmount = parseFloat(invoice.taxAmount);
+  const cgstAmount = totalTaxAmount / 2;
+  const sgstAmount = totalTaxAmount / 2;
 
   return (
-    <main className='w-full p-12'>
-      <Card className="max-w-4xl mx-auto" ref={invoiceRef}>
-        <CardHeader className="flex justify-between items-center border-b pb-4">
-          <div className="flex gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">TAX INVOICE</h1>
-              <p className="text-sm text-gray-600">Original for Recipient</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={generatePDF}
-              disabled={generatingPdf}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {generatingPdf ? 'Generating...' : 'Download PDF'}
-            </Button>
-            {(invoice.company.logoUrl || invoice.company.companyName) && (
-              <div className="flex-shrink-0">
-                {invoice.company.logoUrl ? (
-                  <Image
-                    src={invoice.company.logoUrl}
-                    alt="Company Logo"
-                    width={80}
-                    height={80}
-                    className="object-contain"
-                  />
-                ) : (
-                  <div className="w-20 h-20 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">
-                    <span className="text-xs text-gray-500 text-center">
-                      {invoice.company.companyName?.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 3) || 'LOGO'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </CardHeader>
+    <main className='w-full p-12 text-black bg-gray-100'> {/* Added bg-gray-100 to main for consistency */}
+      <div className="max-w-4xl mx-auto my-20 h-auto rounded-3xl py-8 px-8 bg-white" ref={invoiceRef}>
 
-        <CardContent className="grid grid-cols-2 gap-6 mt-2 text-sm">
-          <div className='space-y-5 h-full text-md'>
-            <div>
-              <h2 className="font-semibold mb-1">From:</h2>
-              <p className="font-bold">{invoice.company.companyName || 'Company Name'}</p>
-              {invoice.company.gst && <p>GSTIN: {invoice.company.gst}</p>}
-              {invoice.company.address && <p>{invoice.company.address}</p>}
-              {(invoice.company.city || invoice.company.state || invoice.company.pincode) && (
-                <p>
-                  {[invoice.company.city, invoice.company.state, invoice.company.pincode]
-                    .filter(Boolean)
-                    .join(', ')}
-                </p>
-              )}
-              {invoice.company.phone && <p>Mobile: {invoice.company.phone}</p>}
-            </div>
-            <div>
-              <h2 className="font-semibold mb-1">Bill To:</h2>
-              <p className="font-bold">{invoice.client.name || 'Client Name'}</p>
-              {invoice.client.gst && <p>GSTIN: {invoice.client.gst}</p>}
-              {invoice.client.billingState && (
-                <p>Place of Supply: {invoice.client.billingState}</p>
-              )}
-            </div>
-          </div>
+        {/* Download PDF Button */}
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={generatePDF}
+            disabled={generatingPdf}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {generatingPdf ? 'Generating...' : 'Download PDF'}
+          </Button>
+        </div>
 
-          <div className="text-right text-[16px]">
-            <p><span className="font-semibold">Invoice #:</span> {invoice.invoiceNumber}</p>
-            <p><span className="font-semibold">Invoice Date:</span> {formatDate(invoice.invoiceDate)}</p>
-            <p><span className="font-semibold">Due Date:</span> {formatDate(invoice.dueDate)}</p>
-          </div>
-        </CardContent>
+        <section className="inline-flex justify-between items-center w-full pb-3">
+            <h1 className="font-bold">TAX INVOICE</h1>
+            <h1>ORIGINAL FOR RECIPIENT</h1>
+        </section>
 
-        <CardContent className="mt-8">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center">#</TableHead>
-                <TableHead className="text-left">Item</TableHead>
-                <TableHead className="text-center">Rate</TableHead>
-                <TableHead className="text-center">Qty</TableHead>
-                <TableHead className="text-center">Taxable Value</TableHead>
-                <TableHead className="text-center">Tax</TableHead>
-                <TableHead className="text-center">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoice.items.map((item, index) => (
-                <TableRow key={item.id}>
-                  <TableCell className="text-center">{index + 1}</TableCell>
-                  <TableCell>
-                    <p className="font-medium">{item.itemName}</p>
-                    {item.hsnSacCode && (
-                      <p className="text-xs text-gray-500">HSN: {item.hsnSacCode}</p>
+        <section className="inline-flex justify-between w-full items-center pb-3">
+            <div>
+                <h1 className="text-2xl font-bold">{invoice.company.companyName || invoice.company.legalName || 'Company Name'}</h1>
+                <div className="inline-flex gap-6">
+                    {invoice.company.gst && (
+                        <h1>
+                            <span className="inline-flex gap-3">
+                                <span className="font-bold">GSTIN</span>
+                                <span>{invoice.company.gst}</span>
+                            </span>
+                        </h1>
                     )}
-                  </TableCell>
-                  <TableCell className="text-center">{formatCurrency(item.rate)}</TableCell>
-
-                  <TableCell className="text-center">{item.quantity}</TableCell>
-                  <TableCell className="text-center">
-                    {formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {formatCurrency(item.taxAmount)} ({item.taxPercentage}%)
-                  </TableCell>
-                  <TableCell className="text-center">{formatCurrency(item.totalAmount)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-
-        <CardContent className="flex justify-end mt-6">
-          <div className="w-full md:w-1/2 text-sm">
-            <div className="flex justify-between py-1">
-              <span>Taxable Amount</span>
-              <span>{formatCurrency(invoice.subtotal)}</span>
+                    {invoice.company.pan && (
+                        <h1>
+                            <span className="inline-flex gap-3">
+                                <span className="font-bold">PAN</span>
+                                <span>{invoice.company.pan}</span>
+                            </span>
+                        </h1>
+                    )}
+                </div>
+                <div>
+                    <span>
+                        {invoice.company.address}
+                        <br/>
+                        {[invoice.company.city, invoice.company.state, invoice.company.pincode]
+                            .filter(Boolean)
+                            .join(', ')}
+                    </span>
+                </div>
+                <div className="inline-flex gap-6">
+                    {invoice.company.phone && (
+                        <h1>
+                            <span className="inline-flex gap-3">
+                                <span className="font-bold">Phone</span>
+                                <span>{invoice.company.phone}</span>
+                            </span>
+                        </h1>
+                    )}
+                    {invoice.company.email && (
+                        <h1>
+                            <span className="inline-flex gap-3">
+                                <span className="font-bold">Email</span>
+                                <span>{invoice.company.email}</span>
+                            </span>
+                        </h1>
+                    )}
+                </div>
             </div>
-            <div className="flex justify-between py-1">
-              <span>Tax Amount</span>
-              <span>{formatCurrency(invoice.taxAmount)}</span>
-            </div>
-            <div className="flex justify-between py-1 font-semibold border-t mt-2">
-              <span>Total</span>
-              <span>{formatCurrency(invoice.totalAmount)}</span>
-            </div>
-          </div>
-        </CardContent>
+            {invoice.company.logoUrl && (
+                <div className="h-40 w-auto">
+                    <Image src={invoice.company.logoUrl} alt="Company Logo" className="h-full w-full object-contain" width={150} height={150}/>
+                </div>
+            )}
+        </section>
 
-        <CardContent className="mt-4 text-sm">
-          <p><span className="font-semibold">Total Items / Qty:</span> {totalItems} / {totalQuantity.toFixed(2)}</p>
-          <p>
-            <span className="font-semibold">Amount (in words):</span> INR {convertToWords(parseFloat(invoice.totalAmount))} Only
-          </p>
-        </CardContent>
+        <section className="pb-3">
+            <div className="inline-flex gap-6">
+                <h1>
+                    <span className="inline-flex gap-3">
+                        <span className="font-bold">Invoice No.</span>
+                        <span>{invoice.invoiceNumber}</span>
+                    </span>
+                </h1>
+                <h1>
+                    <span className="inline-flex gap-3">
+                        <span className="font-bold">Invoice Date</span>
+                        <span>{formatDate(invoice.invoiceDate)}</span>
+                    </span>
+                </h1>
+                <h1>
+                    <span className="inline-flex gap-3">
+                        <span className="font-bold">Due Date</span>
+                        <span>{formatDate(invoice.dueDate)}</span>
+                    </span>
+                </h1>
+            </div>
+        </section>
 
-        {invoice.bank.bankName && (
-          <CardContent className="mt-6 text-sm border-t pt-4">
-            <h3 className="font-semibold mb-2">Bank Details</h3>
-            {invoice.bank.accountHolderName && <p>Account Holder: {invoice.bank.accountHolderName}</p>}
-            {invoice.bank.bankName && <p>Bank: {invoice.bank.bankName}</p>}
-            {invoice.bank.accountNumber && <p>Account No: {invoice.bank.accountNumber}</p>}
-            {invoice.bank.ifscCode && <p>IFSC: {invoice.bank.ifscCode}</p>}
-            {invoice.bank.branchName && <p>Branch: {invoice.bank.branchName}</p>}
-            {invoice.bank.upiId && <p>UPI ID: {invoice.bank.upiId}</p>}
-          </CardContent>
+        <section className="inline-flex gap-6 pb-3">
+            <div className="flex flex-col gap-1">
+                <span className="text-lg font-bold">
+                    Customer Details
+                </span>
+                <div className="font-bold flex flex-col">
+                    {invoice.client.name && <span>{invoice.client.name}</span>}
+                    {invoice.client.companyName && <span>{invoice.client.companyName}</span>}
+                    {invoice.client.gst && <span>GSTIN: {invoice.client.gst}</span>}
+                </div>
+            </div>
+            <div className="flex flex-col gap-1">
+                <span className="text-lg font-bold">
+                    Billing Address
+                </span>
+                <div className="font-bold flex flex-col">
+                    <span>
+                        {invoice.client.billingMainAddress}
+                        <br/>
+                        {[invoice.client.billingCity, invoice.client.billingState, invoice.client.billingPincode]
+                            .filter(Boolean)
+                            .join(', ')}
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        {invoice.client.billingState && (
+            <section className="pb-3">
+                <h1 className="text-md font-md">
+                    Place of Supply
+                </h1>
+                <h1 className="text-sm font-bold">
+                    {invoice.client.billingState}
+                </h1>
+            </section>
         )}
 
-        <CardContent className="flex justify-between items-end mt-8 text-sm">
-          <div>
-            {invoice.notes && (
-              <>
-                <p className="font-semibold">Notes:</p>
-                <p className="text-gray-600">{invoice.notes}</p>
-              </>
+        <section className="mx-auto">
+            {/* Table */}
+            <table className="w-full border-collapse">
+                <thead>
+                <tr className="border-t border-b border-blue-600 text-left text-sm">
+                    <th className="p-2 w-10">#</th>
+                    <th className="p-2">Item</th>
+                    <th className="p-2 text-right">Rate / Item</th>
+                    <th className="p-2 text-right">Qty</th>
+                    <th className="p-2 text-right">Taxable Value</th>
+                    <th className="p-2 text-right">Tax Amount</th>
+                    <th className="p-2 text-right">Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                {invoice.items.map((item, index) => (
+                    <tr key={item.id} className="border-t border-b border-blue-300">
+                        <td className="p-2 align-top">{index + 1}</td>
+                        <td className="p-2">
+                            <div className="font-medium">{item.itemName}</div>
+                            {item.hsnSacCode && <div className="text-xs">HSN: {item.hsnSacCode}</div>}
+                        </td>
+                        <td className="p-2 text-right align-top">{formatCurrency(item.rate)}</td>
+                        <td className="p-2 text-right align-top">{item.quantity}</td>
+                        <td className="p-2 text-right align-top">{formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}</td>
+                        <td className="p-2 text-right align-top">{formatCurrency(item.taxAmount)} ({item.taxPercentage}%)</td>
+                        <td className="p-2 text-right align-top">{formatCurrency(item.totalAmount)}</td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+
+            {/* Summary */}
+            <div className="grid grid-cols-2 gap-4 p-4 text-sm">
+                <div></div> {/* Empty div for alignment */}
+                <div className="space-y-1 text-right">
+                    {/* Assuming Delivery/Shipping Charges are not in the current data, omitting for now */}
+                    {/* <div className="flex justify-between">
+                        <span className="font-medium">Delivery/Shipping Charges</span>
+                        <span>₹250.00</span>
+                    </div>
+                    <div className="text-xs text-gray-700">SAC: 9968</div> */}
+
+                    <div className="flex justify-between pt-2">
+                        <span className="font-medium">Taxable Amount</span>
+                        <span>{formatCurrency(invoice.subtotal)}</span>
+                    </div>
+
+                    {totalTaxAmount > 0 && (
+                      <>
+                        <div className="flex justify-between">
+                            <span>CGST {(parseFloat(invoice.taxAmount) / parseFloat(invoice.subtotal) * 50).toFixed(2)}%</span> {/* Assuming 50/50 split */}
+                            <span>{formatCurrency(cgstAmount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>SGST {(parseFloat(invoice.taxAmount) / parseFloat(invoice.subtotal) * 50).toFixed(2)}%</span> {/* Assuming 50/50 split */}
+                            <span>{formatCurrency(sgstAmount)}</span>
+                        </div>
+                      </>
+                    )}
+                </div>
+            </div>
+
+            {/* Total */}
+            <div className="border-t border-blue-600 px-4 py-3 flex justify-end">
+                <div className="font-semibold text-base">Total {formatCurrency(invoice.totalAmount)}</div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-blue-600 px-4 py-2 text-xs flex justify-between">
+                <div>Total Items / Qty : {totalItems} / {totalQuantity.toFixed(0)}</div>
+                <div>
+                    Total amount (in words): {convertToWords(parseFloat(invoice.totalAmount))}
+                </div>
+            </div>
+
+            <div className="border-t border-blue-600 px-4 py-2 text-right font-semibold text-sm">
+                Amount Payable: {formatCurrency(invoice.totalAmount)}
+            </div>
+
+        </section>
+
+        <section className="inline-flex justify-between w-full pb-3 mt-4">
+            {invoice.bank.bankName && (
+                <div>
+                    <h1 className="text-md font-bold">Bank Details</h1>
+                    <div className="flex text-sm flex-col">
+                        {invoice.bank.bankName && <span><b>Bank:</b> {invoice.bank.bankName}</span>}
+                        {invoice.bank.accountNumber && <span><b>Account #:</b> {invoice.bank.accountNumber}</span>}
+                        {invoice.bank.ifscCode && <span><b>IFSC Code:</b> {invoice.bank.ifscCode}</span>}
+                        {invoice.bank.branchName && <span><b>Branch:</b> {invoice.bank.branchName}</span>}
+                    </div>
+                </div>
             )}
-          </div>
-          <div className="text-right">
-            <p className="font-semibold">For {invoice.company.companyName || 'Company Name'}</p>
-            <p className="mt-8">Authorized Signatory</p>
-          </div>
-        </CardContent>
+            <div className="text-center">
+                <h1 className="font-bold">For Authorised Signatory</h1>
+                {/* Signature image is static in HTML, omitting dynamic image for now */}
+                {/* <img src="https://vx-erp-signatures.s3.ap-south-1.amazonaws.com/signature-XzO2kt-20241121183547.png" alt="" className="h-30 w-auto"/> */}
+                <div className="h-30 w-auto my-2"></div> {/* Placeholder for signature image */}
+                <h1 className="font-bold">For {invoice.company.companyName || 'Company Name'}</h1>
+            </div>
+        </section>
 
-        <CardContent className="mt-6 text-xs text-gray-500 text-center border-t pt-3">
-          This is a digitally signed document.
-          Powered by Swipe | Simple Invoicing, Billing and Payments
-        </CardContent>
+        <section className="w-[50%] flex flex-col gap-5 pb-10 mt-[-50px]">
+            {invoice.notes && (
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-md font-bold">Notes For Invoice</h1>
+                    <p className="text-xs">
+                        {invoice.notes}
+                    </p>
+                </div>
+            )}
+            {invoice.termsConditions && (
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-md font-bold">Terms & Conditions For Invoice</h1>
+                    <p className="text-xs">
+                        {invoice.termsConditions}
+                    </p>
+                </div>
+            )}
+        </section>
 
-      </Card>
+        <section className="text-center w-full">
+            <span className="text-md font-semibold">This is a computer generated document</span>
+        </section>
+
+      </div>
     </main>
   )
 }

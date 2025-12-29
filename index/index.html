@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Title</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-200">
+    <main class="max-w-4xl mx-auto my-20 h-auto rounded-3xl py-8 px-8 bg-white">
+
+        <section class="inline-flex justify-between items-center w-full pb-3">
+            <h1 class="font-bold">TAX INVOICE</h1>
+            <h1>ORIGNAL FOR RECIPIENT</h1>
+        </section>
+
+        <section class="inline-flex justify-between w-full items-center pb-3">
+
+            <div>
+                
+                <h1 class="text-2xl font-bold">VAM ENTERPRISES</h1>
+
+                <div class="inline-flex gap-6">
+
+                    <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">GSTIN</span>
+                            <span>09AVEPS9769H1ZO</span>
+                        </span>
+                    </h1>
+
+                    <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">PAN</span>
+                            <span>AVEPS9769H</span>
+                        </span>
+                    </h1>
+
+                </div>
+
+                <div>
+                    <span>
+                        229, CHANDEL MARKET HARJINDER NAGAR, LAL BANGLA,
+                        <br/>
+                        Kanpur Nagar, UTTAR PRADESH, 208007
+                    </span>
+                </div>
+
+                <div class="inline-flex gap-6">
+
+                    <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">Phone</span>
+                            <span>+918318383377</span>
+                        </span>
+                    </h1>
+
+                    <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">Email</span>
+                            <span>vs@anantsales.in</span>
+                        </span>
+                    </h1>
+
+                </div>
+                
+            </div>
+
+            <div class="h-40 w-auto">
+              <img src="https://vx-erp-logos.s3.ap-south-1.amazonaws.com/VAMShopeeByVAMEnt.-1732213322.png" class="h-full w-full"/>
+            </div>
+
+        </section>
+
+        <section class="pb-3">
+            <div class="inline-flex gap-6">
+
+                <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">Invoice No.</span>
+                            <span>INV/VE/2025-26/43</span>
+                        </span>
+                </h1>
+
+                <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">Invoice Date</span>
+                            <span>29 Dec 2025</span>
+                        </span>
+                </h1>
+
+                <h1>
+                        <span class="inline-flex gap-3">
+                            <span class="font-bold">Due Date</span>
+                            <span>29 Dec 2025</span>
+                        </span>
+                </h1>
+
+            </div>
+        </section>
+
+        <section class="inline-flex gap-6 pb-3">
+            <div class="flex flex-col gap-1">
+                <span class="text-lg font-bold">
+                    Customer Details
+                </span>
+                <div class="font-bold flex flex-col">
+                    <span>The Manager</span>
+                    <span>INDIAN BANK ZONAL OFFICE KANPUR</span>
+                    <span>GSTIN: 09AAACI1607G2ZW</span>
+                </div>
+            </div>
+            <div class="flex flex-col gap-1">
+                <span class="text-lg font-bold">
+                    Billing Address
+                </span>
+                <div class="font-bold flex flex-col">
+                    <span>
+                        INDIAN BANK ZONAL OFFICE LUCKNOW
+                        <br/>
+                        2-B, HABIBULLAH ESTATE,, 11, MAHATMA
+                        <br/>
+                        GANDHI ROAD
+                        <br/>
+                        Lucknow, UTTAR PRADESH, 226001
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section class="pb-3">
+            <h1 class="text-md font-md">
+                Place of Supply
+            </h1>
+            <h1 class="text-sm font-bold">
+                09-UTTAR PRADESH
+            </h1>
+        </section>
+
+        <section class="mx-auto">
+
+            <!-- Table -->
+            <table class="w-full border-collapse">
+                <thead>
+                <tr class="border-t border-b border-blue-600 text-left text-sm">
+                    <th class="p-2 w-10">#</th>
+                    <th class="p-2">Item</th>
+                    <th class="p-2 text-right">Rate / Item</th>
+                    <th class="p-2 text-right">Qty</th>
+                    <th class="p-2 text-right">Taxable Value</th>
+                    <th class="p-2 text-right">Tax Amount</th>
+                    <th class="p-2 text-right">Amount</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr class="border-t border-b border-blue-300">
+                    <td class="p-2 align-top">1</td>
+
+                    <td class="p-2">
+                        <div class="font-medium">Wallet [CardHolder]</div>
+                        <div class="text-xs">HSN: 42023120</div>
+                    </td>
+
+                    <td class="p-2 text-right align-top">125.00</td>
+                    <td class="p-2 text-right align-top">250 PCS</td>
+                    <td class="p-2 text-right align-top">31,250.00</td>
+                    <td class="p-2 text-right align-top">5,625.00 (18%)</td>
+                    <td class="p-2 text-right align-top">36,875.00</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- Summary -->
+            <div class="grid grid-cols-2 gap-4 p-4 text-sm">
+                <div></div>
+
+                <div class="space-y-1 text-right">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Delivery/Shipping Charges</span>
+                        <span>₹250.00</span>
+                    </div>
+
+                    <div class="text-xs text-gray-700">SAC: 9968</div>
+
+                    <div class="flex justify-between pt-2">
+                        <span class="font-medium">Taxable Amount</span>
+                        <span>₹31,500.00</span>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span>CGST 9.0%</span>
+                        <span>₹2,835.00</span>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span>SGST 9.0%</span>
+                        <span>₹2,835.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total -->
+            <div class="border-t border-blue-600 px-4 py-3 flex justify-end">
+                <div class="font-semibold text-base">Total ₹37,170.00</div>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-blue-600 px-4 py-2 text-xs flex justify-between">
+                <div>Total Items / Qty : 1 / 250</div>
+                <div>
+                    Total amount (in words): INR Thirty-Seven Thousand, One Hundred And Seventy Rupees Only.
+                </div>
+            </div>
+
+            <div class="border-t border-blue-600 px-4 py-2 text-right font-semibold text-sm">
+                Amount Payable: ₹37,170.00
+            </div>
+
+        </section>
+
+        <section class="inline-flex justify-between w-full pb-3">
+
+            <div>
+                <h1 class="text-md font-bold">Bank Details</h1>
+                <div class="flex text-sm flex-col">
+                    <span><b>Bank:</b> Indian Bank</span>
+                    <span><b>Account #:</b> 50359470001</span>
+                    <span><b>IFSC Code:</b> IDIB000K580</span>
+                    <span><b>Branch:</b> KANPUR CHAKERI</span>
+                </div>
+            </div>
+            <div class="text-center">
+                <h1 class="font-bold">For Authorised Signatory</h1>
+                <img src="https://vx-erp-signatures.s3.ap-south-1.amazonaws.com/signature-XzO2kt-20241121183547.png" alt="" class="h-30 w-auto"/>
+                <h1 class="font-bold">For VAM Enterprises</h1>
+            </div>
+
+        </section>
+
+        <section class="w-[50%] flex flex-col gap-5 pb-10 mt-[-50px]">
+
+            <div class="flex flex-col gap-2">
+                <h1 class="text-md font-bold">Notes For Invoice</h1>
+                <p class="text-xs">
+                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia dolores odit nostrum tempore voluptate at sapiente optio esse qui rerum quidem, nisi, quos, consequatur iure velit pariatur sint inventore minus.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <h1 class="text-md font-bold">Terms & Conditions For Invoice</h1>
+                <p class="text-xs">
+                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia dolores odit nostrum tempore voluptate at sapiente optio esse qui rerum quidem, nisi, quos, consequatur iure velit pariatur sint inventore minus.
+                </p>
+            </div>
+
+        </section>
+
+        <section class="text-center w-full">
+            <span class="text-md font-semibold">This is a computer generated document</span>
+        </section>
+
+    </main>
+</body>
+</html>
