@@ -13,6 +13,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { Download, FileText } from 'lucide-react'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
+import {SidebarInset, SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
+import Side from "@/app/_components/Side";
 
 interface InvoiceData {
   id: string
@@ -285,272 +287,291 @@ export default function InvoicePage() {
   const sgstAmount = totalTaxAmount / 2;
 
   return (
-    <main className='w-full p-12 text-black bg-gray-100'> {/* Added bg-gray-100 to main for consistency */}
-      <div className="max-w-4xl mx-auto my-20 h-auto rounded-3xl py-8 px-8 bg-white" ref={invoiceRef}>
+      <SidebarProvider>
+        <Side />
+        <SidebarInset className='w-full  bg-background'> {/* Added bg-gray-100 to main for consistency */}
+          <header className="h-20 w-full flex items-center justify-between px-18">
+              <div className={`inline-flex gap-8 items-center`}>
+                  <span>
+                      <SidebarTrigger/>
+                  </span>
+                  <span className="text-foreground">
+                      <b>Invoice No. :- </b>{invoice.invoiceNumber}
+                  </span>
+              </div>
 
-        {/* Download PDF Button */}
-        <div className="flex justify-end mb-4">
-          <Button
-            onClick={generatePDF}
-            disabled={generatingPdf}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            {generatingPdf ? 'Generating...' : 'Download PDF'}
-          </Button>
+              {/* Download PDF Button */}
+              <div className="flex justify-end mb-4" data-html2canvas-ignore>
+                  <Button
+                      onClick={generatePDF}
+                      disabled={generatingPdf}
+                      variant="link"
+                      size="sm"
+                      className="flex items-center gap-2"
+                  >
+                      <Download className="h-4 w-4 text-foreground" />
+                      <span className="text-foreground">
+                          {generatingPdf ? 'Generating...' : 'Download PDF'}
+                      </span>
+                  </Button>
+              </div>
+
+
+          </header>
+          <section className="text-black">
+              <div className="max-w-4xl mx-auto my-5 h-auto rounded-3xl py-8 px-8 bg-white" ref={invoiceRef}>
+
+          <section className="inline-flex justify-between items-center w-full pb-3">
+              <h1 className="font-bold text-lg">TAX INVOICE</h1>
+              <h1>ORIGINAL FOR RECIPIENT</h1>
+          </section>
+
+          <section className="inline-flex justify-between w-full items-center pb-3">
+              <div>
+                  <h1 className="text-2xl font-bold">{invoice.company.companyName || invoice.company.legalName || 'Company Name'}</h1>
+                  <div className="inline-flex gap-6">
+                      {invoice.company.gst && (
+                          <h1>
+                              <span className="inline-flex gap-3">
+                                  <span className="font-bold">GSTIN</span>
+                                  <span>{invoice.company.gst}</span>
+                              </span>
+                          </h1>
+                      )}
+                      {invoice.company.pan && (
+                          <h1>
+                              <span className="inline-flex gap-3">
+                                  <span className="font-bold">PAN</span>
+                                  <span>{invoice.company.pan}</span>
+                              </span>
+                          </h1>
+                      )}
+                  </div>
+                  <div>
+                      <span>
+                          {invoice.company.address}
+                          <br/>
+                          {[invoice.company.city, invoice.company.state, invoice.company.pincode]
+                              .filter(Boolean)
+                              .join(', ')}
+                      </span>
+                  </div>
+                  <div className="inline-flex gap-6">
+                      {invoice.company.phone && (
+                          <h1>
+                              <span className="inline-flex gap-3">
+                                  <span className="font-bold">Phone</span>
+                                  <span>{invoice.company.phone}</span>
+                              </span>
+                          </h1>
+                      )}
+                      {invoice.company.email && (
+                          <h1>
+                              <span className="inline-flex gap-3">
+                                  <span className="font-bold">Email</span>
+                                  <span>{invoice.company.email}</span>
+                              </span>
+                          </h1>
+                      )}
+                  </div>
+              </div>
+              {invoice.company.logoUrl && (
+                  <div className="h-40 w-auto">
+                      <Image src={invoice.company.logoUrl} alt="Company Logo" className="h-full w-full object-contain" width={150} height={150}/>
+                  </div>
+              )}
+          </section>
+
+          <section className="pb-3">
+              <div className="inline-flex gap-6">
+                  <h1>
+                      <span className="inline-flex gap-3">
+                          <span className="font-bold">Invoice No. :-</span>
+                          <span>{invoice.invoiceNumber}</span>
+                      </span>
+                  </h1>
+                  <h1>
+                      <span className="inline-flex gap-3">
+                          <span className="font-bold">Invoice Date :-</span>
+                          <span>{formatDate(invoice.invoiceDate)}</span>
+                      </span>
+                  </h1>
+                  <h1>
+                      <span className="inline-flex gap-3">
+                          <span className="font-bold">Due Date :-</span>
+                          <span>{formatDate(invoice.dueDate)}</span>
+                      </span>
+                  </h1>
+              </div>
+          </section>
+
+          <section className="inline-flex gap-6 pb-3">
+              <div className="flex flex-col gap-1">
+                  <span className="text-lg font-bold">
+                      Customer Details
+                  </span>
+                  <div className="font-bold flex flex-col">
+                      {invoice.client.name && <span>{invoice.client.name}</span>}
+                      {invoice.client.companyName && <span>{invoice.client.companyName}</span>}
+                      {invoice.client.gst && <span>GSTIN: {invoice.client.gst}</span>}
+                  </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                  <span className="text-lg font-bold">
+                      Billing Address
+                  </span>
+                  <div className="font-bold flex flex-col">
+                      <span>
+                          {invoice.client.billingMainAddress}
+                          <br/>
+                          {[invoice.client.billingCity, invoice.client.billingState, invoice.client.billingPincode]
+                              .filter(Boolean)
+                              .join(', ')}
+                      </span>
+                  </div>
+              </div>
+          </section>
+
+          {invoice.client.billingState && (
+              <section className="pb-3">
+                  <h1 className="text-md font-md">
+                      Place of Supply
+                  </h1>
+                  <h1 className="text-sm font-bold">
+                      {invoice.client.billingState}
+                  </h1>
+              </section>
+          )}
+
+          <section className="mx-auto">
+              {/* Table */}
+              <table className="w-full border-collapse">
+                  <thead>
+                  <tr className="border-t border-b border-blue-600 text-left text-sm">
+                      <th className="p-2 w-10">#</th>
+                      <th className="p-2">Item</th>
+                      <th className="p-2 text-right">Rate / Item</th>
+                      <th className="p-2 text-right">Qty</th>
+                      <th className="p-2 text-right">Taxable Value</th>
+                      <th className="p-2 text-right">Tax Amount</th>
+                      <th className="p-2 text-right">Amount</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  {invoice.items.map((item, index) => (
+                      <tr key={item.id} className="border-t border-b border-blue-300">
+                          <td className="p-2 align-top">{index + 1}</td>
+                          <td className="p-2">
+                              <div className="font-medium">{item.itemName}</div>
+                              {item.hsnSacCode && <div className="text-xs">HSN: {item.hsnSacCode}</div>}
+                          </td>
+                          <td className="p-2 text-right align-top">{formatCurrency(item.rate)}</td>
+                          <td className="p-2 text-right align-top">{item.quantity}</td>
+                          <td className="p-2 text-right align-top">{formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}</td>
+                          <td className="p-2 text-right align-top">{formatCurrency(item.taxAmount)} ({item.taxPercentage}%)</td>
+                          <td className="p-2 text-right align-top">{formatCurrency(item.totalAmount)}</td>
+                      </tr>
+                  ))}
+                  </tbody>
+              </table>
+
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-4 p-4 text-sm">
+                  <div></div> {/* Empty div for alignment */}
+                  <div className="space-y-1 text-right">
+                      {/* Assuming Delivery/Shipping Charges are not in the current data, omitting for now */}
+                      {/* <div className="flex justify-between">
+                          <span className="font-medium">Delivery/Shipping Charges</span>
+                          <span>₹250.00</span>
+                      </div>
+                      <div className="text-xs text-gray-700">SAC: 9968</div> */}
+
+                      <div className="flex justify-between pt-2">
+                          <span className="font-medium">Taxable Amount</span>
+                          <span>{formatCurrency(invoice.subtotal)}</span>
+                      </div>
+
+                      {totalTaxAmount > 0 && (
+                        <>
+                          <div className="flex justify-between">
+                              <span>CGST {(parseFloat(invoice.taxAmount) / parseFloat(invoice.subtotal) * 50).toFixed(2)}%</span> {/* Assuming 50/50 split */}
+                              <span>{formatCurrency(cgstAmount)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span>SGST {(parseFloat(invoice.taxAmount) / parseFloat(invoice.subtotal) * 50).toFixed(2)}%</span> {/* Assuming 50/50 split */}
+                              <span>{formatCurrency(sgstAmount)}</span>
+                          </div>
+                        </>
+                      )}
+                  </div>
+              </div>
+
+              {/* Total */}
+              <div className="border-t border-blue-600 px-4 py-3 flex justify-end">
+                  <div className="font-semibold text-base">Total {formatCurrency(invoice.totalAmount)}</div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-blue-600 px-4 py-2 text-xs flex justify-between">
+                  <div>Total Items / Qty : {totalItems} / {totalQuantity.toFixed(0)}</div>
+                  <div>
+                      Total amount (in words): {convertToWords(parseFloat(invoice.totalAmount))}
+                  </div>
+              </div>
+
+              <div className="border-t border-blue-600 px-4 py-2 text-right font-semibold text-sm">
+                  Amount Payable: {formatCurrency(invoice.totalAmount)}
+              </div>
+
+          </section>
+
+          <section className="inline-flex justify-between w-full pb-3 mt-4">
+              {invoice.bank.bankName && (
+                  <div>
+                      <h1 className="text-md font-bold">Bank Details</h1>
+                      <div className="flex text-sm flex-col">
+                          {invoice.bank.bankName && <span><b>Bank:</b> {invoice.bank.bankName}</span>}
+                          {invoice.bank.accountNumber && <span><b>Account #:</b> {invoice.bank.accountNumber}</span>}
+                          {invoice.bank.ifscCode && <span><b>IFSC Code:</b> {invoice.bank.ifscCode}</span>}
+                          {invoice.bank.branchName && <span><b>Branch:</b> {invoice.bank.branchName}</span>}
+                      </div>
+                  </div>
+              )}
+              <div className="text-center">
+                  <h1 className="font-bold">For {invoice.company.companyName || 'Company Name'}</h1>
+                  <div className="h-30 w-auto my-2"></div> {/* Placeholder for signature image */}
+                  <h1 className="font-bold">Authorised Signatory</h1>
+                  {/* Signature image is static in HTML, omitting dynamic image for now */}
+                  {/* <img src="https://vx-erp-signatures.s3.ap-south-1.amazonaws.com/signature-XzO2kt-20241121183547.png" alt="" className="h-30 w-auto"/> */}
+              </div>
+          </section>
+
+          <section className="w-[50%] flex flex-col gap-5 pb-10 mt-[-50px]">
+              {invoice.notes && (
+                  <div className="flex flex-col gap-2">
+                      <h1 className="text-md font-bold">Notes For Invoice</h1>
+                      <p className="text-xs">
+                          {invoice.notes}
+                      </p>
+                  </div>
+              )}
+              {invoice.termsConditions && (
+                  <div className="flex flex-col gap-2">
+                      <h1 className="text-md font-bold">Terms & Conditions For Invoice</h1>
+                      <p className="text-xs">
+                          {invoice.termsConditions}
+                      </p>
+                  </div>
+              )}
+          </section>
+
+          <section className="text-center w-full">
+              <span className="text-md font-semibold">This is a computer generated document</span>
+          </section>
+
         </div>
-
-        <section className="inline-flex justify-between items-center w-full pb-3">
-            <h1 className="font-bold">TAX INVOICE</h1>
-            <h1>ORIGINAL FOR RECIPIENT</h1>
-        </section>
-
-        <section className="inline-flex justify-between w-full items-center pb-3">
-            <div>
-                <h1 className="text-2xl font-bold">{invoice.company.companyName || invoice.company.legalName || 'Company Name'}</h1>
-                <div className="inline-flex gap-6">
-                    {invoice.company.gst && (
-                        <h1>
-                            <span className="inline-flex gap-3">
-                                <span className="font-bold">GSTIN</span>
-                                <span>{invoice.company.gst}</span>
-                            </span>
-                        </h1>
-                    )}
-                    {invoice.company.pan && (
-                        <h1>
-                            <span className="inline-flex gap-3">
-                                <span className="font-bold">PAN</span>
-                                <span>{invoice.company.pan}</span>
-                            </span>
-                        </h1>
-                    )}
-                </div>
-                <div>
-                    <span>
-                        {invoice.company.address}
-                        <br/>
-                        {[invoice.company.city, invoice.company.state, invoice.company.pincode]
-                            .filter(Boolean)
-                            .join(', ')}
-                    </span>
-                </div>
-                <div className="inline-flex gap-6">
-                    {invoice.company.phone && (
-                        <h1>
-                            <span className="inline-flex gap-3">
-                                <span className="font-bold">Phone</span>
-                                <span>{invoice.company.phone}</span>
-                            </span>
-                        </h1>
-                    )}
-                    {invoice.company.email && (
-                        <h1>
-                            <span className="inline-flex gap-3">
-                                <span className="font-bold">Email</span>
-                                <span>{invoice.company.email}</span>
-                            </span>
-                        </h1>
-                    )}
-                </div>
-            </div>
-            {invoice.company.logoUrl && (
-                <div className="h-40 w-auto">
-                    <Image src={invoice.company.logoUrl} alt="Company Logo" className="h-full w-full object-contain" width={150} height={150}/>
-                </div>
-            )}
-        </section>
-
-        <section className="pb-3">
-            <div className="inline-flex gap-6">
-                <h1>
-                    <span className="inline-flex gap-3">
-                        <span className="font-bold">Invoice No.</span>
-                        <span>{invoice.invoiceNumber}</span>
-                    </span>
-                </h1>
-                <h1>
-                    <span className="inline-flex gap-3">
-                        <span className="font-bold">Invoice Date</span>
-                        <span>{formatDate(invoice.invoiceDate)}</span>
-                    </span>
-                </h1>
-                <h1>
-                    <span className="inline-flex gap-3">
-                        <span className="font-bold">Due Date</span>
-                        <span>{formatDate(invoice.dueDate)}</span>
-                    </span>
-                </h1>
-            </div>
-        </section>
-
-        <section className="inline-flex gap-6 pb-3">
-            <div className="flex flex-col gap-1">
-                <span className="text-lg font-bold">
-                    Customer Details
-                </span>
-                <div className="font-bold flex flex-col">
-                    {invoice.client.name && <span>{invoice.client.name}</span>}
-                    {invoice.client.companyName && <span>{invoice.client.companyName}</span>}
-                    {invoice.client.gst && <span>GSTIN: {invoice.client.gst}</span>}
-                </div>
-            </div>
-            <div className="flex flex-col gap-1">
-                <span className="text-lg font-bold">
-                    Billing Address
-                </span>
-                <div className="font-bold flex flex-col">
-                    <span>
-                        {invoice.client.billingMainAddress}
-                        <br/>
-                        {[invoice.client.billingCity, invoice.client.billingState, invoice.client.billingPincode]
-                            .filter(Boolean)
-                            .join(', ')}
-                    </span>
-                </div>
-            </div>
-        </section>
-
-        {invoice.client.billingState && (
-            <section className="pb-3">
-                <h1 className="text-md font-md">
-                    Place of Supply
-                </h1>
-                <h1 className="text-sm font-bold">
-                    {invoice.client.billingState}
-                </h1>
-            </section>
-        )}
-
-        <section className="mx-auto">
-            {/* Table */}
-            <table className="w-full border-collapse">
-                <thead>
-                <tr className="border-t border-b border-blue-600 text-left text-sm">
-                    <th className="p-2 w-10">#</th>
-                    <th className="p-2">Item</th>
-                    <th className="p-2 text-right">Rate / Item</th>
-                    <th className="p-2 text-right">Qty</th>
-                    <th className="p-2 text-right">Taxable Value</th>
-                    <th className="p-2 text-right">Tax Amount</th>
-                    <th className="p-2 text-right">Amount</th>
-                </tr>
-                </thead>
-                <tbody>
-                {invoice.items.map((item, index) => (
-                    <tr key={item.id} className="border-t border-b border-blue-300">
-                        <td className="p-2 align-top">{index + 1}</td>
-                        <td className="p-2">
-                            <div className="font-medium">{item.itemName}</div>
-                            {item.hsnSacCode && <div className="text-xs">HSN: {item.hsnSacCode}</div>}
-                        </td>
-                        <td className="p-2 text-right align-top">{formatCurrency(item.rate)}</td>
-                        <td className="p-2 text-right align-top">{item.quantity}</td>
-                        <td className="p-2 text-right align-top">{formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}</td>
-                        <td className="p-2 text-right align-top">{formatCurrency(item.taxAmount)} ({item.taxPercentage}%)</td>
-                        <td className="p-2 text-right align-top">{formatCurrency(item.totalAmount)}</td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-
-            {/* Summary */}
-            <div className="grid grid-cols-2 gap-4 p-4 text-sm">
-                <div></div> {/* Empty div for alignment */}
-                <div className="space-y-1 text-right">
-                    {/* Assuming Delivery/Shipping Charges are not in the current data, omitting for now */}
-                    {/* <div className="flex justify-between">
-                        <span className="font-medium">Delivery/Shipping Charges</span>
-                        <span>₹250.00</span>
-                    </div>
-                    <div className="text-xs text-gray-700">SAC: 9968</div> */}
-
-                    <div className="flex justify-between pt-2">
-                        <span className="font-medium">Taxable Amount</span>
-                        <span>{formatCurrency(invoice.subtotal)}</span>
-                    </div>
-
-                    {totalTaxAmount > 0 && (
-                      <>
-                        <div className="flex justify-between">
-                            <span>CGST {(parseFloat(invoice.taxAmount) / parseFloat(invoice.subtotal) * 50).toFixed(2)}%</span> {/* Assuming 50/50 split */}
-                            <span>{formatCurrency(cgstAmount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>SGST {(parseFloat(invoice.taxAmount) / parseFloat(invoice.subtotal) * 50).toFixed(2)}%</span> {/* Assuming 50/50 split */}
-                            <span>{formatCurrency(sgstAmount)}</span>
-                        </div>
-                      </>
-                    )}
-                </div>
-            </div>
-
-            {/* Total */}
-            <div className="border-t border-blue-600 px-4 py-3 flex justify-end">
-                <div className="font-semibold text-base">Total {formatCurrency(invoice.totalAmount)}</div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-blue-600 px-4 py-2 text-xs flex justify-between">
-                <div>Total Items / Qty : {totalItems} / {totalQuantity.toFixed(0)}</div>
-                <div>
-                    Total amount (in words): {convertToWords(parseFloat(invoice.totalAmount))}
-                </div>
-            </div>
-
-            <div className="border-t border-blue-600 px-4 py-2 text-right font-semibold text-sm">
-                Amount Payable: {formatCurrency(invoice.totalAmount)}
-            </div>
-
-        </section>
-
-        <section className="inline-flex justify-between w-full pb-3 mt-4">
-            {invoice.bank.bankName && (
-                <div>
-                    <h1 className="text-md font-bold">Bank Details</h1>
-                    <div className="flex text-sm flex-col">
-                        {invoice.bank.bankName && <span><b>Bank:</b> {invoice.bank.bankName}</span>}
-                        {invoice.bank.accountNumber && <span><b>Account #:</b> {invoice.bank.accountNumber}</span>}
-                        {invoice.bank.ifscCode && <span><b>IFSC Code:</b> {invoice.bank.ifscCode}</span>}
-                        {invoice.bank.branchName && <span><b>Branch:</b> {invoice.bank.branchName}</span>}
-                    </div>
-                </div>
-            )}
-            <div className="text-center">
-                <h1 className="font-bold">For Authorised Signatory</h1>
-                {/* Signature image is static in HTML, omitting dynamic image for now */}
-                {/* <img src="https://vx-erp-signatures.s3.ap-south-1.amazonaws.com/signature-XzO2kt-20241121183547.png" alt="" className="h-30 w-auto"/> */}
-                <div className="h-30 w-auto my-2"></div> {/* Placeholder for signature image */}
-                <h1 className="font-bold">For {invoice.company.companyName || 'Company Name'}</h1>
-            </div>
-        </section>
-
-        <section className="w-[50%] flex flex-col gap-5 pb-10 mt-[-50px]">
-            {invoice.notes && (
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-md font-bold">Notes For Invoice</h1>
-                    <p className="text-xs">
-                        {invoice.notes}
-                    </p>
-                </div>
-            )}
-            {invoice.termsConditions && (
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-md font-bold">Terms & Conditions For Invoice</h1>
-                    <p className="text-xs">
-                        {invoice.termsConditions}
-                    </p>
-                </div>
-            )}
-        </section>
-
-        <section className="text-center w-full">
-            <span className="text-md font-semibold">This is a computer generated document</span>
-        </section>
-
-      </div>
-    </main>
+          </section>
+        </SidebarInset>
+      </SidebarProvider>
   )
 }
