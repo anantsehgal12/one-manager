@@ -14,6 +14,8 @@ import { ClientDropdown } from '@/app/_components/client-dropdown'
 import { ProductDropdown } from '@/app/_components/product-dropdown'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DatePicker } from '@/app/_components/date-picker'
+import { Switch } from '@/components/ui/switch' // Import Switch
+import { Label } from '@/components/ui/label'
 import {
   Form,
   FormControl,
@@ -21,11 +23,12 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form'
 
 import { toast } from 'react-hot-toast'
 import { SignIn, useUser } from '@clerk/nextjs'
-import { CirclePlus, Plus } from 'lucide-react'
+import { CirclePlus } from 'lucide-react'
 import InvoiceHeader from '@/app/_components/InvoiceHeader'
 import Link from 'next/link'
 
@@ -52,8 +55,17 @@ const invoiceSchema = z.object({
   termsConditions: z.string().optional(),
   bankDetailsId: z.string().optional(),
   signatureId: z.string().optional(),
-}).refine((data) => {
-  // This will be handled by the component that checks selectedProducts
+
+  // New fields for payment record
+  paymentNotes: z.string().optional(),
+  paymentAmount: z.preprocess(
+      (val) => (val === '' ? undefined : Number(val)),
+      z.number().min(0, 'Payment amount must be 0 or greater').optional()
+  ),
+  paymentMode: z.enum(['Cash', 'UPI', 'Bank Transfer', 'Card', 'Cheque', 'Other']).optional(),
+  markAsFullyPaid: z.boolean().default(false).optional(),
+}).refine((_data) => { // Changed 'data' to '_data' to mark as unused
+                       // This will be handled by the component that checks selectedProducts
   return true
 }, {
   message: "At least one product is required"
@@ -67,6 +79,7 @@ interface Product {
   sellingPrice: string
   taxPercentage: string
   hsnSacCode?: string
+  primaryUnits: string // Added primaryUnits
 }
 
 interface ProductWithQuantity extends Product {
@@ -75,6 +88,7 @@ interface ProductWithQuantity extends Product {
   discount?: number
   priceWithTax?: number
   total?: number
+  primaryUnits?: string // Added primaryUnits
 }
 
 interface BankDetail {
@@ -121,10 +135,12 @@ export default function CreateInvoicePage() {
       termsConditions: '',
       bankDetailsId: '',
       signatureId: '',
+      paymentNotes: '',
+      paymentAmount: undefined,
+      paymentMode: undefined,
+      markAsFullyPaid: false,
     },
   })
-
-
 
   // Load products
   useEffect(() => {
@@ -145,7 +161,7 @@ export default function CreateInvoicePage() {
     }
 
     if (isSignedIn) {
-      loadData()
+      void loadData()
     }
   }, [isSignedIn])
 
@@ -161,14 +177,13 @@ export default function CreateInvoicePage() {
         }
       } catch (error) {
         console.error('Failed to load bank details:', error)
-        // Don't show error toast for bank details as it's not critical
       } finally {
         setLoadingBankDetails(false)
       }
     }
 
     if (isSignedIn) {
-      loadBankDetails()
+      void loadBankDetails()
     }
   }, [isSignedIn])
 
@@ -184,26 +199,26 @@ export default function CreateInvoicePage() {
         }
       } catch (error) {
         console.error('Failed to load signatures:', error)
-        // Don't show error toast for signatures as it's not critical
       } finally {
         setLoadingSignatures(false)
       }
     }
 
     if (isSignedIn) {
-      loadSignatures()
+      void loadSignatures()
     }
   }, [isSignedIn])
 
   // Sync due date with invoice date
   const watchInvoiceDate = form.watch('invoiceDate')
-
   useEffect(() => {
     if (watchInvoiceDate) {
-      // Set due date to be the same as invoice date initially
       form.setValue('dueDate', watchInvoiceDate)
     }
   }, [watchInvoiceDate, form])
+
+  const watchMarkAsFullyPaid = form.watch('markAsFullyPaid');
+  const watchPaymentAmount = form.watch('paymentAmount');
 
   // Calculate totals whenever selected products change
   const { taxableValue, taxAmount, totalDiscount, totalAmount } = useMemo(() => {
@@ -212,26 +227,21 @@ export default function CreateInvoicePage() {
     let totalDiscount = 0
 
     selectedProducts.forEach((product) => {
-      // If user has entered a custom total, use that directly
       if (product.total !== undefined) {
-        // For custom total, we need to calculate the base amount by reversing tax calculation
         const taxPercentage = parseFloat(product.taxPercentage)
         const baseAmount = product.total / (1 + taxPercentage / 100)
         taxableValue += baseAmount
         taxAmount += product.total - baseAmount
 
-        // Calculate discount from custom total
         const unitPrice = product.unitPrice || parseFloat(product.sellingPrice)
         const itemSubtotal = product.quantity * unitPrice
         const discount = product.discount || 0
         const discountAmount = (itemSubtotal * discount / 100)
         totalDiscount += discountAmount
       } else {
-        // Otherwise use the current unit price or fall back to selling price
         const unitPrice = product.unitPrice || parseFloat(product.sellingPrice)
         const itemSubtotal = product.quantity * unitPrice
 
-        // Apply discount if present
         const discount = product.discount || 0
         const discountAmount = (itemSubtotal * discount / 100)
         const discountedAmount = itemSubtotal - discountAmount
@@ -249,10 +259,17 @@ export default function CreateInvoicePage() {
     return { taxableValue, taxAmount, totalDiscount, totalAmount }
   }, [selectedProducts])
 
+  useEffect(() => {
+    if (watchMarkAsFullyPaid) {
+      form.setValue('paymentAmount', parseFloat(totalAmount.toFixed(2)));
+    } else if (watchPaymentAmount === parseFloat(totalAmount.toFixed(2))) {
+      // If user unchecks "fully paid" and amount was full, clear it
+      form.setValue('paymentAmount', undefined);
+    }
+  }, [watchMarkAsFullyPaid, totalAmount, form, watchPaymentAmount]); // Added watchPaymentAmount to dependencies
 
 
   const onSubmit = async (data: InvoiceFormData) => {
-    // Check if at least one product is selected
     if (selectedProducts.length === 0) {
       toast.error('Please add at least one product to the invoice')
       return
@@ -260,7 +277,6 @@ export default function CreateInvoicePage() {
 
     setIsLoading(true)
     try {
-      // Convert selected products to invoice items format
       const invoiceItems = selectedProducts.map(product => ({
         productId: product.id,
         itemName: product.name,
@@ -268,10 +284,9 @@ export default function CreateInvoicePage() {
         rate: product.unitPrice || parseFloat(product.sellingPrice),
         taxPercentage: product.taxPercentage as '0' | '5' | '12' | '18' | '28' | '40',
         hsnSacCode: product.hsnSacCode || '',
-        description: '', // Empty description for now
+        description: '',
       }))
 
-      // Convert dates to ISO strings for API submission
       const invoiceData = {
         ...data,
         items: invoiceItems,
@@ -283,6 +298,12 @@ export default function CreateInvoicePage() {
         balanceAmount: totalAmount.toFixed(2),
         status: 'draft',
         signatureId: data.signatureId || null,
+
+        // Include payment record data
+        paymentNotes: data.paymentNotes || null,
+        paymentAmount: data.paymentAmount !== undefined ? data.paymentAmount.toFixed(2) : null,
+        paymentMode: data.paymentMode || null,
+        markAsFullyPaid: data.markAsFullyPaid,
       }
 
       const response = await fetch('/api/invoices', {
@@ -310,406 +331,495 @@ export default function CreateInvoicePage() {
     }
   }
 
-
-
-
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-background w-full">
-        <InvoiceHeader isSignedIn={false} />
-
-        <main className="flex w-full min-h-[calc(100vh-120px)] flex-col items-center justify-center px-6">
-          <section className='py-10 flex flex-col items-center justify-center gap-8'>
-            <span>Please SignIn/SignUp below with your account to access this page.</span>
-            <SignIn />
-          </section>
-        </main>
-
-        <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto px-6 py-4">
-            <p className="text-sm text-muted-foreground text-center">
-              © 2024 One Manager. All rights reserved.
-            </p>
-          </div>
-        </footer>
-      </div>
+        <div className="min-h-screen bg-background w-full">
+          <InvoiceHeader isSignedIn={false} />
+          <main className="flex w-full min-h-[calc(100vh-120px)] flex-col items-center justify-center px-6">
+            <section className='py-10 flex flex-col items-center justify-center gap-8'>
+              <span>Please SignIn/SignUp below with your account to access this page.</span>
+              <SignIn />
+            </section>
+          </main>
+          <footer className="border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+            <div className="container mx-auto px-6 py-4">
+              <p className="text-sm text-muted-foreground text-center">
+                © 2024 One Manager. All rights reserved.
+              </p>
+            </div>
+          </footer>
+        </div>
     )
   }
-
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-background w-full">
-        <InvoiceHeader loadingData={true} />
-
-        <main className="flex w-full min-h-[calc(100vh-120px)] items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Loading...</p>
-          </div>
-        </main>
-
-        <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto px-6 py-4">
-            <p className="text-sm text-muted-foreground text-center">
-              © 2024 One Manager. All rights reserved.
-            </p>
-          </div>
-        </footer>
-      </div>
+        <div className="min-h-screen bg-background w-full">
+          <InvoiceHeader loadingData={true} />
+          <main className="flex w-full min-h-[calc(100vh-120px)] items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">Loading...</p>
+            </div>
+          </main>
+          <footer className="border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+            <div className="container mx-auto px-6 py-4">
+              <p className="text-sm text-muted-foreground text-center">
+                © 2024 One Manager. All rights reserved.
+              </p>
+            </div>
+          </footer>
+        </div>
     )
   }
 
-
   return (
-    <div className="min-h-screen w-full bg-background">
+      <div className="min-h-screen min-w-[76rem] mx-auto bg-background">
+        <InvoiceHeader
+            isSignedIn={true}
+            loadingData={false}
+            isLoading={isLoading}
+            onSubmit={form.handleSubmit(onSubmit)}
+            invoiceNumber={form.watch('invoiceNumber')}
+            onInvoiceNumberChange={(value) => form.setValue('invoiceNumber', value)}
+        />
 
-      {/* Fixed Header */}
-      <InvoiceHeader
-        isSignedIn={true}
-        loadingData={false}
-        isLoading={isLoading}
-        onSubmit={form.handleSubmit(onSubmit)}
-        invoiceNumber={form.watch('invoiceNumber')}
-        onInvoiceNumberChange={(value) => form.setValue('invoiceNumber', value)}
-      />
+        <main className=" py-8 px-1 mx-auto w-full">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Invoice Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Invoice Details</CardTitle>
+                  <CardDescription>Basic information about the invoice</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="inline-flex items-center w-full gap-8">
+                    <div className="w-90 md:w-full sm:w-full">
+                      <FormField
+                          control={form.control}
+                          name="clientId"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Client *</FormLabel>
+                                <FormControl>
+                                  <ClientDropdown
+                                      value={field.value}
+                                      onValueChange={field.onChange}
+                                      placeholder="Select a client"
+                                      disabled={isLoading || loadingData}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                    </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto py-8 px-1 w-full">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Invoice Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Invoice Details</CardTitle>
-                <CardDescription>Basic information about the invoice</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="inline-flex items-center w-full gap-8">
-                  <div className="w-90 md:w-full sm:w-full">
+                    <div className='md:inline-flex md:gap-4 sm:gap-4 sm:inline-flex'>
+                      <FormField
+                          control={form.control}
+                          name="invoiceDate"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Invoice Date *</FormLabel>
+                                <FormControl>
+                                  <DatePicker
+                                      date={field.value}
+                                      onSelect={field.onChange}
+                                      placeholder="Select invoice date"
+                                      className='lg:w-60 md:w-70 sm:w-70'
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+
+                      <FormField
+                          control={form.control}
+                          name="dueDate"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Due Date</FormLabel>
+                                <FormControl>
+                                  <DatePicker
+                                      date={field.value}
+                                      className='lg:w-60 md:w-70 sm:w-70'
+                                      onSelect={field.onChange}
+                                      placeholder="Select due date"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                    </div>
+
                     <FormField
-                      control={form.control}
-                      name="clientId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Client *</FormLabel>
-                          <FormControl>
-                            <ClientDropdown
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              placeholder="Select a client"
-                              disabled={isLoading || loadingData}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                        control={form.control}
+                        name="referenceNumber"
+                        render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Reference Number</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Reference" className='w-60' {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                        )}
                     />
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div className='md:inline-flex md:gap-4 sm:gap-4 sm:inline-flex'>
-                    <FormField
-                      control={form.control}
-                      name="invoiceDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Invoice Date *</FormLabel>
-                          <FormControl>
-                            <DatePicker
-                              date={field.value}
-                              onSelect={field.onChange}
-                              placeholder="Select invoice date"
-                              className='lg:w-60 md:w-70 sm:w-70'
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date</FormLabel>
-                          <FormControl>
-                            <DatePicker
-                              date={field.value}
-                              className='lg:w-60 md:w-70 sm:w-70'
-                              onSelect={field.onChange}
-                              placeholder="Select due date"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="referenceNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Reference Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Reference" className='w-60' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              {/* Product Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Products</CardTitle>
+                  <CardDescription>Search and select products to add to this invoice</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ProductDropdown
+                      products={products}
+                      selectedProducts={selectedProducts}
+                      onProductsChange={setSelectedProducts}
+                      disabled={isLoading || loadingData}
                   />
+                </CardContent>
+              </Card>
+              <div className='inline-flex gap-5 w-full h-full'>
+                <div className='flex flex-col gap-5 w-[50%] h-full'>
+                  {/* Additional Information */}
+                  <Card className='h-full flex flex-col'>
+                    <CardHeader className="flex-shrink-0">
+                      <CardTitle>Additional Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 flex-1 flex flex-col">
+                      <FormField
+                          control={form.control}
+                          name="notes"
+                          render={({ field }) => (
+                              <FormItem className="flex-1 flex flex-col">
+                                <FormLabel>Notes</FormLabel>
+                                <FormControl className="flex-1">
+                                  <Textarea
+                                      placeholder="Additional notes"
+                                      className='h-full min-h-[200px] resize-none'
+                                      {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+
+                      <FormField
+                          control={form.control}
+                          name="termsConditions"
+                          render={({ field }) => (
+                              <FormItem className="flex-1 flex flex-col">
+                                <FormLabel>Terms & Conditions</FormLabel>
+                                <FormControl className="flex-1">
+                                  <Textarea
+                                      placeholder="Terms and conditions"
+                                      className='h-full min-h-[200px] resize-none'
+                                      {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Product Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Products</CardTitle>
-                <CardDescription>Search and select products to add to this invoice</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProductDropdown
-                  products={products}
-                  selectedProducts={selectedProducts}
-                  onProductsChange={setSelectedProducts}
-                  disabled={isLoading || loadingData}
-                />
-              </CardContent>
-            </Card>
-            <div className='inline-flex gap-5 w-full h-full'>
-              <div className='flex flex-col gap-5 w-[50%]  h-[619px]'>
-                {/* Additional Information */}
-                <Card className='h-full flex flex-col'>
-                  <CardHeader className="flex-shrink-0">
-                    <CardTitle>Additional Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 flex-1 flex flex-col">
-                    <FormField
-                      control={form.control}
-
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem className="flex-1 flex flex-col">
-                          <FormLabel>Notes</FormLabel>
-                          <FormControl className="flex-1">
-                            <Textarea 
-                              placeholder="Additional notes" 
-                              className='h-full min-h-[200px] resize-none' 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="termsConditions"
-                      render={({ field }) => (
-                        <FormItem className="flex-1 flex flex-col">
-                          <FormLabel>Terms & Conditions</FormLabel>
-                          <FormControl className="flex-1">
-                            <Textarea 
-                              placeholder="Terms and conditions" 
-                              className='h-full min-h-[200px] resize-none' 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-              {/* Totals */}
-              <div className='flex flex-col gap-5 w-[50%]'>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Invoice Totals</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span>Taxable Value:</span>
-                        <span>₹{taxableValue.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Tax:</span>
-                        <span>₹{taxAmount.toFixed(2)}</span>
-                      </div>
-                      {totalDiscount > 0 && (
+                {/* Totals */}
+                <div className='flex flex-col gap-5 w-[50%]'>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Invoice Totals</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span>Total Discount:</span>
-                          <span>₹{totalDiscount.toFixed(2)}</span>
+                          <span>Taxable Value:</span>
+                          <span>₹{taxableValue.toFixed(2)}</span>
                         </div>
-                      )}
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Total Amount:</span>
-                        <span>₹{totalAmount.toFixed(2)}</span>
+                        <div className="flex justify-between">
+                          <span>Total Tax:</span>
+                          <span>₹{taxAmount.toFixed(2)}</span>
+                        </div>
+                        {totalDiscount > 0 && (
+                            <div className="flex justify-between">
+                              <span>Total Discount:</span>
+                              <span>₹{totalDiscount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between font-bold text-lg border-t pt-2">
+                          <span>Total Amount:</span>
+                          <span>₹{totalAmount.toFixed(2)}</span>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                {/* Bank Details Selection */}
-                <Card>
-                  <CardHeader>
-                    <div className='flex justify-between items-center'>
-                    <div className='flex flex-col gap-2'>
-                      <CardTitle>Bank Details</CardTitle>
-                      <CardDescription>Select bank details</CardDescription>
-                    </div>
-                    <div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                      >
+                    </CardContent>
+                  </Card>
+
+                  {/* Payment Record */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3"> {/* Adjusted header for inline elements */}
+                      <div className='flex flex-col gap-1'> {/* Group title and description */}
+                        <CardTitle>Payment Record</CardTitle>
+                        <CardDescription>Record Payment for this Invoice</CardDescription>
+                      </div>
+                      <FormField
+                          control={form.control}
+                          name="markAsFullyPaid"
+                          render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-2"> {/* Adjusted styling for switch */}
+                                <div className="space-y-0.5">
+                                  
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      disabled={isLoading}
+                                      aria-label="Mark as fully paid"
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm"> {/* Smaller label for header */}
+                                    Mark as Fully Paid
+                                  </FormLabel>
+                              </FormItem>
+                          )}
+                      />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-4"> {/* Container for amount and mode on one line */}
+                        <div className="flex-1">
+                          <FormField
+                              control={form.control}
+                              name="paymentAmount"
+                              render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Amount Paid</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                          type="number"
+                                          placeholder="0.00"
+                                          {...field}
+                                          value={field.value === undefined ? '' : field.value}
+                                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                                          disabled={isLoading || form.getValues('markAsFullyPaid')}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <FormField
+                              control={form.control}
+                              name="paymentMode"
+                              render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Mode of Payment</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || ''}> {/* Added value prop */}
+                                      <FormControl>
+                                        <SelectTrigger disabled={isLoading} className='w-full'>
+                                          <SelectValue placeholder="Select payment mode" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="Cash">Cash</SelectItem>
+                                        <SelectItem value="UPI">UPI</SelectItem>
+                                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                                        <SelectItem value="Card">Card</SelectItem>
+                                        <SelectItem value="Cheque">Cheque</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                        </div>
+                      </div>
+                      <FormField
+                          control={form.control}
+                          name="paymentNotes"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Payment Notes</FormLabel>
+                                <FormControl>
+                                  <Input
+                                      placeholder="Notes about this payment"
+                                      {...field}
+                                      
+                                      disabled={isLoading}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Bank Details Selection */}
+                  <Card>
+                    <CardHeader>
+                      <div className='flex justify-between items-center'>
+                        <div className='flex flex-col gap-2'>
+                          <CardTitle>Bank Details</CardTitle>
+                          <CardDescription>Select bank details</CardDescription>
+                        </div>
+                        <div>
+                          <Button
+                              variant="ghost"
+                              size="sm"
+                          >
                         <span>
                           <Link href="/settings" className='flex items-center gap-2'>
                             <CirclePlus className="mr-2 h-4 w-4" />
                             Add Your Bank Account?
                           </Link>
                         </span>
-                      </Button>
-                    </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="bankDetailsId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Bank Account</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value || "none"}
-                              onValueChange={(value) => {
-                                field.onChange(value === "none" ? "" : value)
-                              }}
-                              disabled={loadingBankDetails}
-                            >
-                              <SelectTrigger className='w-full'>
-                                <SelectValue placeholder={loadingBankDetails ? "Loading bank details..." : "Select bank account"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">No bank details</SelectItem>
-                                {bankDetails.map((bank) => (
-                                  <SelectItem key={bank.id} value={bank.id}>
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{bank.accountHolderName}</span>
-                                      <span className="text-sm text-muted-foreground">
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                          control={form.control}
+                          name="bankDetailsId"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Bank Account</FormLabel>
+                                <FormControl>
+                                  <Select
+                                      value={field.value || "none"}
+                                      onValueChange={(value) => {
+                                        field.onChange(value === "none" ? "" : value)
+                                      }}
+                                      disabled={loadingBankDetails}
+                                  >
+                                    <SelectTrigger className='w-full'>
+                                      <SelectValue placeholder={loadingBankDetails ? "Loading bank details..." : "Select bank account"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No bank details</SelectItem>
+                                      {bankDetails.map((bank) => (
+                                          <SelectItem key={bank.id} value={bank.id}>
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">{bank.accountHolderName}</span>
+                                              <span className="text-sm text-muted-foreground">
                                         {bank.bankName} - {bank.accountNumber}
-                                        {bank.isDefault && <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded">Default</span>}
+                                                {bank.isDefault && <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-1 rounded">Default</span>}
                                       </span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
+                                            </div>
+                                          </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <div className='flex justify-between items-center'>
-                    <div className='flex flex-col gap-2'>
-                      <CardTitle>Signature</CardTitle>
-                      <CardDescription>Select signature for the document</CardDescription>
-                    </div>
-                    <div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                      >
+                  <Card>
+                    <CardHeader>
+                      <div className='flex justify-between items-center'>
+                        <div className='flex flex-col gap-2'>
+                          <CardTitle>Signature</CardTitle>
+                          <CardDescription>Select signature for the document</CardDescription>
+                        </div>
+                        <div>
+                          <Button
+                              variant="ghost"
+                              size="sm"
+                          >
                         <span>
                           <Link href="/settings" className='flex items-center gap-2'>
                             <CirclePlus className="mr-2 h-4 w-4" />
                             Add Your Signature?
                           </Link>
                         </span>
-                      </Button>
-                    </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="signatureId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Signature</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value || "none"}
-                              onValueChange={(value) => {
-                                field.onChange(value === "none" ? "" : value)
-                              }}
-                              disabled={loadingSignatures}
-                            >
-                              <SelectTrigger className='w-full'>
-                                <SelectValue placeholder={loadingSignatures ? "Loading signatures..." : "Select signature"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">No signature</SelectItem>
-                                {signatures.map((signature) => (
-                                  <SelectItem key={signature.id} value={signature.id}>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{signature.name}</span>
-                                      {signature.isDefault && <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Default</span>}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                  </CardContent>
-                </Card>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                          control={form.control}
+                          name="signatureId"
+                          render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Signature</FormLabel>
+                                <FormControl>
+                                  <Select
+                                      value={field.value || "none"}
+                                      onValueChange={(value) => {
+                                        field.onChange(value === "none" ? "" : value)
+                                      }}
+                                      disabled={loadingSignatures}
+                                  >
+                                    <SelectTrigger className='w-full'>
+                                      <SelectValue placeholder={loadingSignatures ? "Loading signatures..." : "Select signature"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No signature</SelectItem>
+                                      {signatures.map((signature) => (
+                                          <SelectItem key={signature.id} value={signature.id}>
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium">{signature.name}</span>
+                                              {signature.isDefault && <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Default</span>}
+                                            </div>
+                                          </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end space-x-4">
+                <Button type="button" variant="outline" onClick={() => router.back()}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Creating...' : 'Create Invoice'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </main>
+
+        {/* Fixed Footer */}
+        <footer className="border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 sticky bottom-0 z-50">
+          <div className=" px-6 py-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                © 2024 One Manager. All rights reserved.
+              </p>
+              <div className="text-sm text-muted-foreground">
+                Invoice Total: ₹{totalAmount.toFixed(2)}
               </div>
             </div>
-
-
-
-            {/* Submit Button */}
-            <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" onClick={() => router.back()}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating...' : 'Create Invoice'}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </main>
-
-      {/* Fixed Footer */}
-      <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky bottom-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              © 2024 One Manager. All rights reserved.
-            </p>
-            <div className="text-sm text-muted-foreground">
-              Invoice Total: ₹{totalAmount.toFixed(2)}
-            </div>
           </div>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
   )
 }

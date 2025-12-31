@@ -15,7 +15,6 @@ import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import {SidebarInset, SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
 import Side from "@/app/_components/Side";
-import { Badge } from '@/components/ui/badge'
 
 interface InvoiceData {
   id: string
@@ -128,53 +127,6 @@ function convertToWords(amount: number): string {
   return `INR ${amountInWords} Only.`;
 }
 
-  const getinvstatus =(status: string, balanceAmount: string) => {
-    const isFullyPaid = parseFloat(balanceAmount) === 0
-    if(isFullyPaid){
-      return(
-        <span>
-          Amount Paid :-
-        </span>
-      )
-    }
-    else{
-      return(
-        <span>
-          Amount Payable :-
-        </span>
-      )
-    }
-  }
-
-  const getStatusBadge = (status: string, balanceAmount: string) => {
-        // Check if invoice is fully paid (balance is 0)
-        const isFullyPaid = parseFloat(balanceAmount) === 0
-        if (isFullyPaid) {
-            return (
-                <Badge className="bg-green-500 hover:bg-green-600 border-green-500 text-white">
-                    Fully Paid
-                </Badge>
-            )
-        }
-
-        const statusMap = {
-            draft: { label: 'Draft', variant: 'secondary' as const },
-            sent: { label: 'Sent', variant: 'default' as const },
-            paid: { label: 'Paid', variant: 'default' as const },
-            overdue: { label: 'Overdue', variant: 'destructive' as const },
-            cancelled: { label: 'Cancelled', variant: 'destructive' as const },
-        }
-
-        const statusInfo = statusMap[status as keyof typeof statusMap] || { label: status, variant: 'secondary' as const }
-
-        return (
-            <Badge variant={statusInfo.variant}>
-                {statusInfo.label}
-            </Badge>
-        )
-
-
-    }
 
 export default function InvoicePage() {
   const params = useParams()
@@ -189,6 +141,7 @@ export default function InvoicePage() {
   // Extract invoice ID from params Promise
   const invoiceId = params.id as string
   
+
 
   // PDF Generation function
   const generatePDF = async () => {
@@ -404,26 +357,26 @@ export default function InvoicePage() {
                       </span>
                   </div>
                   <div className="inline-flex gap-6">
-
+                      {invoice.company.phone && (
                           <h1>
                               <span className="inline-flex gap-3">
-                                  <span className="font-bold">Phone:- </span>
+                                  <span className="font-bold">Phone</span>
                                   <span>{invoice.company.phone}</span>
                               </span>
                           </h1>
-
-
+                      )}
+                      {invoice.company.email && (
                           <h1>
                               <span className="inline-flex gap-3">
-                                  <span className="font-bold">Email:- </span>
+                                  <span className="font-bold">Email</span>
                                   <span>{invoice.company.email}</span>
                               </span>
                           </h1>
-
+                      )}
                   </div>
               </div>
               {invoice.company.logoUrl && (
-                  <div className="h-35 w-auto">
+                  <div className="h-40 w-auto">
                       <Image src={invoice.company.logoUrl} alt="Company Logo" className="h-full w-full object-contain" width={150} height={150}/>
                   </div>
               )}
@@ -468,15 +421,13 @@ export default function InvoicePage() {
                       Billing Address
                   </span>
                   <div className="font-bold flex flex-col">
-                      {invoice.client.billingMainAddress && <span>{invoice.client.billingMainAddress}</span>}
-                      {invoice.client.billingCity && <span>{invoice.client.billingCity}</span>}
-                      {(invoice.client.billingState || invoice.client.billingPincode) && (
-                          <span>
-                              {[invoice.client.billingState, invoice.client.billingPincode]
-                                  .filter(Boolean)
-                                  .join(', ')}
-                          </span>
-                      )}
+                      <span>
+                          {invoice.client.billingMainAddress}
+                          <br/>
+                          {[invoice.client.billingCity, invoice.client.billingState, invoice.client.billingPincode]
+                              .filter(Boolean)
+                              .join(', ')}
+                      </span>
                   </div>
               </div>
           </section>
@@ -494,35 +445,35 @@ export default function InvoicePage() {
 
           <section className="mx-auto">
               {/* Table */}
-              <Table className="w-full border-collapse">
-                  <TableHeader>
-                  <TableRow className="border-t border-b border-blue-600 text-left text-sm">
-                      <TableHead className="p-2 w-10 text-black">#</TableHead>
-                      <TableHead className="p-2 text-black">Item</TableHead>
-                      <TableHead className="p-2 text-right text-black">Rate / Item</TableHead>
-                      <TableHead className="p-2 text-right text-black">Qty</TableHead>
-                      <TableHead className="p-2 text-right text-black">Taxable Value</TableHead>
-                      <TableHead className="p-2 text-right text-black">Tax Amount</TableHead>
-                      <TableHead className="p-2 text-right text-black">Amount</TableHead>
-                  </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <table className="w-full border-collapse">
+                  <thead>
+                  <tr className="border-t border-b border-blue-600 text-left text-sm">
+                      <th className="p-2 w-10">#</th>
+                      <th className="p-2">Item</th>
+                      <th className="p-2 text-right">Rate / Item</th>
+                      <th className="p-2 text-right">Qty</th>
+                      <th className="p-2 text-right">Taxable Value</th>
+                      <th className="p-2 text-right">Tax Amount</th>
+                      <th className="p-2 text-right">Amount</th>
+                  </tr>
+                  </thead>
+                  <tbody>
                   {invoice.items.map((item, index) => (
-                      <TableRow key={item.id} className="border-t border-b border-blue-300">
-                          <TableCell className="p-2 align-top">{index + 1}</TableCell>
-                          <TableCell className="p-2">
+                      <tr key={item.id} className="border-t border-b border-blue-300">
+                          <td className="p-2 align-top">{index + 1}</td>
+                          <td className="p-2">
                               <div className="font-medium">{item.itemName}</div>
                               {item.hsnSacCode && <div className="text-xs">HSN: {item.hsnSacCode}</div>}
-                          </TableCell>
-                          <TableCell className="p-2 text-right align-top">{formatCurrency(item.rate)}</TableCell>
-                          <TableCell className="p-2 text-right align-top">{item.quantity}</TableCell>
-                          <TableCell className="p-2 text-right align-top">{formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}</TableCell>
-                          <TableCell className="p-2 text-right align-top">{formatCurrency(item.taxAmount)} ({item.taxPercentage}%)</TableCell>
-                          <TableCell className="p-2 text-right align-top">{formatCurrency(item.totalAmount)}</TableCell>
-                      </TableRow>
+                          </td>
+                          <td className="p-2 text-right align-top">{formatCurrency(item.rate)}</td>
+                          <td className="p-2 text-right align-top">{item.quantity}</td>
+                          <td className="p-2 text-right align-top">{formatCurrency(parseFloat(item.totalAmount) - parseFloat(item.taxAmount))}</td>
+                          <td className="p-2 text-right align-top">{formatCurrency(item.taxAmount)} ({item.taxPercentage}%)</td>
+                          <td className="p-2 text-right align-top">{formatCurrency(item.totalAmount)}</td>
+                      </tr>
                   ))}
-                  </TableBody>
-              </Table>
+                  </tbody>
+              </table>
 
               {/* Summary */}
               <div className="grid grid-cols-2 gap-4 p-4 text-sm">
@@ -567,12 +518,9 @@ export default function InvoicePage() {
                       Total amount (in words): {convertToWords(parseFloat(invoice.totalAmount))}
                   </div>
               </div>
-                
+
               <div className="border-t border-blue-600 px-4 py-2 text-right font-semibold text-sm">
-                  {getinvstatus(invoice.status, invoice.balanceAmount)} {formatCurrency(invoice.balanceAmount)}
-                  <div className='py-2'>
-                  {getStatusBadge(invoice.status, invoice.balanceAmount)}
-                </div>
+                  Amount Payable: {formatCurrency(invoice.totalAmount)}
               </div>
 
           </section>

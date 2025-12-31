@@ -86,7 +86,18 @@ export default function InvoicesPage() {
         loadInvoices(newPage)
     }
 
-    const getStatusBadge = (status: string) => {
+    const getStatusBadge = (status: string, balanceAmount: string) => {
+        // Check if invoice is fully paid (balance is 0)
+        const isFullyPaid = parseFloat(balanceAmount) === 0
+        
+        if (isFullyPaid) {
+            return (
+                <Badge className="bg-green-500 hover:bg-green-600 border-green-500 text-white">
+                    Fully Paid
+                </Badge>
+            )
+        }
+
         const statusMap = {
             draft: { label: 'Draft', variant: 'secondary' as const },
             sent: { label: 'Sent', variant: 'default' as const },
@@ -219,7 +230,7 @@ export default function InvoicesPage() {
                                                             {formatCurrency(invoice.balanceAmount)}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {getStatusBadge(invoice.status)}
+                                                            {getStatusBadge(invoice.status, invoice.balanceAmount)}
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex items-center justify-end space-x-2">

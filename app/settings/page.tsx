@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Save, Building, FileSignature, CreditCard, FileText, Loader2, Plus, X, Edit2, Trash2, Image as ImageIcon, RefreshCw } from 'lucide-react'
+import { Save, Building, FileSignature, CreditCard, FileText, Loader2, Plus, X, Edit2, Trash2, Image as ImageIcon, RefreshCw, DollarSign } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
@@ -105,6 +105,18 @@ export default function SettingsPage() {
         isDefault: false
     })
 
+    // Payment Options state
+    const [paymentOptions, setPaymentOptions] = useState<any[]>([])
+    const [isLoadingPaymentOptions, setIsLoadingPaymentOptions] = useState(false)
+    const [isAddPaymentOptionOpen, setIsAddPaymentOptionOpen] = useState(false)
+    const [editingPaymentOption, setEditingPaymentOption] = useState<any>(null)
+    const [newPaymentOption, setNewPaymentOption] = useState({
+        name: '',
+        type: '',
+        details: '',
+        isDefault: false
+    })
+
 
     // Set company name from Clerk organization
     useEffect(() => {
@@ -148,6 +160,7 @@ export default function SettingsPage() {
                     fetchCompanyDetails(),
                     fetchSignatures(),
                     fetchBankDetails(),
+                    fetchPaymentOptions(), // Fetch payment options
                     fetchDocumentSettings()
                 ])
             } catch (error) {
@@ -226,6 +239,23 @@ export default function SettingsPage() {
             console.error('Error fetching bank details:', error)
         } finally {
             setIsLoadingBankDetails(false)
+        }
+    }
+
+    const fetchPaymentOptions = async () => {
+        setIsLoadingPaymentOptions(true)
+        try {
+            const response = await fetch('/api/settings/payment-options')
+            if (response.ok) {
+                const data = await response.json()
+                setPaymentOptions(data)
+            } else {
+                console.error('Failed to fetch payment options')
+            }
+        } catch (error) {
+            console.error('Error fetching payment options:', error)
+        } finally {
+            setIsLoadingPaymentOptions(false)
         }
     }
 
@@ -349,6 +379,7 @@ export default function SettingsPage() {
                 fetchCompanyDetails(),
                 fetchSignatures(),
                 fetchBankDetails(),
+                fetchPaymentOptions(), // Refresh payment options
                 fetchDocumentSettings()
             ])
             toast.success('All data refreshed successfully')
@@ -698,6 +729,83 @@ export default function SettingsPage() {
         }
     }
 
+    // Payment Options Handlers
+    const handleSavePaymentOption = async () => {
+        if (!newPaymentOption.name.trim() || !newPaymentOption.type.trim()) {
+            toast.error('Please fill in all required fields')
+            return
+        }
+
+        try {
+            const response = await fetch('/api/settings/payment-options', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newPaymentOption),
+            })
+
+            if (response.ok) {
+                const savedPaymentOption = await response.json()
+                setPaymentOptions(prev => [...prev, savedPaymentOption])
+                setNewPaymentOption({ name: '', type: '', details: '', isDefault: false })
+                setIsAddPaymentOptionOpen(false)
+                toast.success('Payment option created successfully')
+            } else {
+                const error = await response.json()
+                toast.error(error.error || 'Failed to create payment option')
+            }
+        } catch (error) {
+            console.error('Error creating payment option:', error)
+            toast.error('Failed to create payment option')
+        }
+    }
+
+    const handleDeletePaymentOption = async (id: string) => {
+        try {
+            const response = await fetch(`/api/settings/payment-options?id=${id}`, {
+                method: 'DELETE',
+            })
+
+            if (response.ok) {
+                setPaymentOptions(prev => prev.filter(option => option.id !== id))
+                toast.success('Payment option deleted successfully')
+            } else {
+                toast.error('Failed to delete payment option')
+            }
+        } catch (error) {
+            console.error('Error deleting payment option:', error)
+            toast.error('Failed to delete payment option')
+        }
+    }
+
+    const handleSetDefaultPayment = async (id: string, isDefault: boolean) => {
+        try {
+            const response = await fetch('/api/settings/payment-options', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id, isDefault }),
+            })
+
+            if (response.ok) {
+                const updatedPaymentOption = await response.json()
+                setPaymentOptions(prev => prev.map(option => 
+                    option.id === id 
+                        ? updatedPaymentOption 
+                        : { ...option, isDefault: false }
+                ))
+                toast.success(isDefault ? 'Default payment option set' : 'Default removed')
+            } else {
+                toast.error('Failed to update default payment option')
+            }
+        } catch (error) {
+            console.error('Error updating default payment option:', error)
+            toast.error('Failed to update default payment option')
+        }
+    }
+
 
     // Document Settings Handlers
     const getDocumentSetting = (documentType: string) => {
@@ -822,7 +930,7 @@ export default function SettingsPage() {
                         </div>
 
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                            <TabsList className="grid w-full grid-cols-4">
+                            <TabsList className="grid w-full grid-cols-5"> {/* Changed to grid-cols-5 */}
                                 <TabsTrigger value="company" className="flex items-center gap-2">
                                     <Building className="w-4 h-4" />
                                     Company Details
@@ -834,6 +942,10 @@ export default function SettingsPage() {
                                 <TabsTrigger value="bank" className="flex items-center gap-2">
                                     <CreditCard className="w-4 h-4" />
                                     Bank Details
+                                </TabsTrigger>
+                                <TabsTrigger value="payment-options" className="flex items-center gap-2"> {/* New Tab Trigger */}
+                                    <DollarSign className="w-4 h-4" />
+                                    Payment Options
                                 </TabsTrigger>
                                 <TabsTrigger value="documents" className="flex items-center gap-2">
                                     <FileText className="w-4 h-4" />
@@ -1463,6 +1575,148 @@ export default function SettingsPage() {
                                                                         variant="ghost"
                                                                         size="sm"
                                                                         onClick={() => handleDeleteBankDetail(bank.id)}
+                                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            {/* Payment Options Tab */}
+                            <TabsContent value="payment-options" className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <DollarSign className="w-5 h-5" />
+                                            Payment Options
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Manage payment methods for your invoices
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-lg font-semibold">Your Payment Options</h3>
+                                            <Dialog open={isAddPaymentOptionOpen} onOpenChange={setIsAddPaymentOptionOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button className="flex items-center gap-2">
+                                                        <Plus className="w-4 h-4" />
+                                                        Add Payment Option
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-[500px]">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Add New Payment Option</DialogTitle>
+                                                        <DialogDescription>
+                                                            Add a new payment method for your invoices.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="grid gap-4 py-4">
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="paymentName">Name *</Label>
+                                                            <Input
+                                                                id="paymentName"
+                                                                placeholder="e.g., UPI, Bank Transfer, Cash"
+                                                                value={newPaymentOption.name}
+                                                                onChange={(e) => setNewPaymentOption(prev => ({ ...prev, name: e.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="paymentType">Type *</Label>
+                                                            <Input
+                                                                id="paymentType"
+                                                                placeholder="e.g., UPI, Bank Transfer, Cash"
+                                                                value={newPaymentOption.type}
+                                                                onChange={(e) => setNewPaymentOption(prev => ({ ...prev, type: e.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label htmlFor="paymentDetails">Details</Label>
+                                                            <Textarea
+                                                                id="paymentDetails"
+                                                                placeholder="e.g., UPI ID: yourname@bank, Account No: 1234567890"
+                                                                value={newPaymentOption.details}
+                                                                onChange={(e) => setNewPaymentOption(prev => ({ ...prev, details: e.target.value }))}
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <Switch
+                                                                id="isDefaultPayment"
+                                                                checked={newPaymentOption.isDefault}
+                                                                onCheckedChange={(checked) => setNewPaymentOption(prev => ({ ...prev, isDefault: checked }))}
+                                                            />
+                                                            <Label htmlFor="isDefaultPayment">Set as default payment option</Label>
+                                                        </div>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                setIsAddPaymentOptionOpen(false)
+                                                                setNewPaymentOption({ name: '', type: '', details: '', isDefault: false })
+                                                            }}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button onClick={handleSavePaymentOption}>
+                                                            Save Payment Option
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+
+                                        {isLoadingPaymentOptions ? (
+                                            <div className="flex justify-center py-8">
+                                                <Loader2 className="w-6 h-6 animate-spin" />
+                                            </div>
+                                        ) : paymentOptions.length === 0 ? (
+                                            <div className="text-center py-8 text-gray-500">
+                                                <DollarSign className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                                                <p>No payment options found</p>
+                                                <p className="text-sm">Click "Add Payment Option" to get started</p>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {paymentOptions.map((option) => (
+                                                    <Card key={option.id} className="relative">
+                                                        <CardContent className="p-4">
+                                                            {option.isDefault && (
+                                                                <div className="absolute top-2 right-2">
+                                                                    <div className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                                                                        Default
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            <div className="space-y-3">
+                                                                <div>
+                                                                    <h4 className="font-medium text-sm">{option.name} ({option.type})</h4>
+                                                                    {option.details && <p className="text-xs text-gray-600">{option.details}</p>}
+                                                                </div>
+                                                                <div className="flex items-center justify-between pt-2 border-t">
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <Switch
+                                                                            id={`default-payment-${option.id}`}
+                                                                            checked={option.isDefault}
+                                                                            onCheckedChange={(checked) => handleSetDefaultPayment(option.id, checked)}
+                                                                        />
+                                                                        <Label htmlFor={`default-payment-${option.id}`} className="text-xs">
+                                                                            Default
+                                                                        </Label>
+                                                                    </div>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleDeletePaymentOption(option.id)}
                                                                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                                                     >
                                                                         <Trash2 className="w-4 h-4" />

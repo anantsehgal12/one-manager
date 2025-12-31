@@ -38,6 +38,7 @@ export async function GET(
         referenceNumber: invoicesTable.referenceNumber,
         createdAt: invoicesTable.createdAt,
         clientId: invoicesTable.clientId,
+        bankDetailsId: invoicesTable.bankDetailsId,
       })
       .from(invoicesTable)
       .where(and(eq(invoicesTable.id, id), eq(invoicesTable.userId, userId)))
@@ -130,25 +131,25 @@ export async function GET(
       ))
       .limit(1);
 
-    // Fetch bank details using current authenticated user (same as Settings page)
-    const bankData = await db
-      .select({
-        accountHolderName: bankDetailsTable.accountHolderName,
-        bankName: bankDetailsTable.bankName,
-        accountNumber: bankDetailsTable.accountNumber,
-        ifscCode: bankDetailsTable.ifscCode,
-        branchName: bankDetailsTable.branchName,
-        upiId: bankDetailsTable.upiId,
-      })
-      .from(bankDetailsTable)
-      .where(and(
-        eq(bankDetailsTable.userId, currentUser.id),
-        eq(bankDetailsTable.orgId, currentOrgId)
-      ))
-      .limit(1);
+    // Fetch bank details using the bankDetailsId from the invoice
+    let bank = {};
+    if (invoice.bankDetailsId) {
+      const bankData = await db
+        .select({
+          accountHolderName: bankDetailsTable.accountHolderName,
+          bankName: bankDetailsTable.bankName,
+          accountNumber: bankDetailsTable.accountNumber,
+          ifscCode: bankDetailsTable.ifscCode,
+          branchName: bankDetailsTable.branchName,
+          upiId: bankDetailsTable.upiId,
+        })
+        .from(bankDetailsTable)
+        .where(eq(bankDetailsTable.id, invoice.bankDetailsId))
+        .limit(1);
+      bank = bankData[0] || {};
+    }
 
     const company = companyData[0] || {};
-    const bank = bankData[0] || {};
 
     // Format the response
     const response = {

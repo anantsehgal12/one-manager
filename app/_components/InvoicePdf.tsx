@@ -74,6 +74,12 @@ export interface InvoiceData {
     branchName: string | null
     upiId: string | null
   }
+
+  paymentOption: { // New payment option field
+    name: string | null;
+    type: string | null;
+    details: string | null;
+  }
   
   items: Array<{
     id: string
@@ -414,6 +420,11 @@ export const InvoicePdf: React.FC<{ invoice: InvoiceData }> = ({ invoice }) => {
       accountNumber: invoice.bank.accountNumber || '',
       ifsc: invoice.bank.ifscCode || '',
       branch: invoice.bank.branchName || ''
+    },
+    paymentOption: { // Transformed payment option
+      name: invoice.paymentOption.name || '',
+      type: invoice.paymentOption.type || '',
+      details: invoice.paymentOption.details || ''
     }
   };
 
@@ -599,8 +610,17 @@ export const InvoicePdf: React.FC<{ invoice: InvoiceData }> = ({ invoice }) => {
             <Text>Amount Payable: {money(invoice.totalAmount)}</Text>
           </View>
 
-          {/* Bank Details & Signature */}
+          {/* Payment Options, Bank Details & Signature */}
           <View style={[styles.inlineFlex, styles.justifyBetween, styles.wFull, styles.section]}>
+            {transformedData.paymentOption.name && (
+              <View>
+                <Text style={[styles.textMd, styles.fontBold]}>Payment Option</Text>
+                <View style={[styles.flexCol, styles.textSm]}>
+                  <Text><Text style={styles.fontBold}>Method:</Text> {transformedData.paymentOption.name} ({transformedData.paymentOption.type})</Text>
+                  {transformedData.paymentOption.details && <Text><Text style={styles.fontBold}>Details:</Text> {transformedData.paymentOption.details}</Text>}
+                </View>
+              </View>
+            )}
             <View>
               <Text style={[styles.textMd, styles.fontBold]}>Bank Details</Text>
               <View style={[styles.flexCol, styles.textSm]}>

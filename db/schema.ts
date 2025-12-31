@@ -52,6 +52,15 @@ export const pageSizeEnum = pgEnum("page_size", [
   "Legal",
 ]);
 
+export const paymentModeEnum = pgEnum("payment_mode", [
+  "Cash",
+  "UPI",
+  "Bank Transfer",
+  "Card",
+  "Cheque",
+  "Other",
+]);
+
 /* ============================
    ORGANIZATIONS
 ============================ */
@@ -294,7 +303,6 @@ export const bankDetailsTable = pgTable(
   })
 );
 
-
 /* ============================
    COMPANY DETAILS
 ============================ */
@@ -388,7 +396,57 @@ export const documentSettingsTable = pgTable(
   })
 );
 
+/* ============================
+   PAYMENT RECORDS
+============================ */
 
+export const paymentRecordsTable = pgTable(
+  "payment_records",
+  {
+    id: varchar("id", { length: 255 })
+      .primaryKey()
+      .$defaultFn(() => sql`'payment_record_' || gen_random_uuid()`),
+
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+
+    orgId: varchar("org_id", { length: 255 }).notNull(),
+
+    invoiceId: varchar("invoice_id", { length: 255 })
+      .notNull()
+      .references(() => invoicesTable.id, { onDelete: "cascade" }), // Link to invoice
+
+    clientId: varchar("client_id", { length: 255 })
+      .notNull()
+      .references(() => clientsTable.id, { onDelete: "restrict" }), // Link to client for ledger
+
+    amount: decimal("amount", {
+      precision: 12,
+      scale: 2,
+    }).notNull(),
+
+    paymentMode: paymentModeEnum("payment_mode").notNull(),
+
+    notes: text("notes"),
+    
+    isFullyPaid: boolean("is_fully_paid").default(false).notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("payment_records_user_id_idx").on(table.userId),
+    orgIdIdx: index("payment_records_org_id_idx").on(table.orgId),
+    invoiceIdIdx: index("payment_records_invoice_id_idx").on(table.invoiceId),
+    clientIdIdx: index("payment_records_client_id_idx").on(table.clientId),
+  })
+);
 
 
 /* ============================
@@ -453,6 +511,15 @@ export const invoicesTable = pgTable(
     notes: text("notes"),
     termsConditions: text("terms_conditions"),
 
+    bankDetailsId: varchar("bank_details_id", { length: 255 })
+      .references(() => bankDetailsTable.id, { onDelete: "restrict" }),
+    signatureId: varchar("signature_id", { length: 255 })
+      .references(() => signaturesTable.id, { onDelete: "restrict" }),
+    
+    // New field to link to an initial payment record if one is made during invoice creation
+    initialPaymentRecordId: varchar("initial_payment_record_id", { length: 255 })
+      .references(() => paymentRecordsTable.id, { onDelete: "restrict" }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -468,6 +535,9 @@ export const invoicesTable = pgTable(
     invoiceNumberIdx: index("invoices_invoice_number_idx").on(table.invoiceNumber),
     statusIdx: index("invoices_status_idx").on(table.status),
     invoiceDateIdx: index("invoices_invoice_date_idx").on(table.invoiceDate),
+    bankDetailsIdIdx: index("invoices_bank_details_id_idx").on(table.bankDetailsId),
+    signatureIdIdx: index("invoices_signature_id_idx").on(table.signatureId),
+    initialPaymentRecordIdIdx: index("invoices_initial_payment_record_id_idx").on(table.initialPaymentRecordId),
   })
 );
 
@@ -548,6 +618,9 @@ export type Signature = typeof signaturesTable.$inferSelect;
 export type NewSignature = typeof signaturesTable.$inferInsert;
 export type BankDetail = typeof bankDetailsTable.$inferSelect;
 export type NewBankDetail = typeof bankDetailsTable.$inferInsert;
+
+export type PaymentRecord = typeof paymentRecordsTable.$inferSelect;
+export type NewPaymentRecord = typeof paymentRecordsTable.$inferInsert;
 
 export type CompanyDetail = typeof companyDetailsTable.$inferSelect;
 export type NewCompanyDetail = typeof companyDetailsTable.$inferInsert;

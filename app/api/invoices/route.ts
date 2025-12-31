@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserId, getCurrentOrgId } from '@/lib/auth'
 import { db } from '@/db'
-import { invoicesTable, invoiceItemsTable } from '@/db/schema'
+import { invoicesTable, invoiceItemsTable, paymentRecordsTable } from '@/db/schema' // Added paymentRecordsTable
 import { eq, and, desc } from 'drizzle-orm'
 
 
@@ -107,9 +107,16 @@ export async function POST(request: NextRequest) {
       subtotal,
       taxAmount,
       totalAmount,
-      balanceAmount,
+      // balanceAmount, // Will be calculated
       status,
       signatureId,
+      paymentOptionId,
+      
+      // Payment record fields
+      paymentNotes,
+      paymentAmount,
+      paymentMode,
+      markAsFullyPaid,
     } = body
 
     // Validate required fields
@@ -130,6 +137,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    let initialPaidAmount = '0.00';
+    let currentBalanceAmount = totalAmount;
+    let invoiceStatus = status || 'draft';
+    let initialPaymentRecordId = null;
+
+    // If payment details are provided, process them
+    if (paymentAmount && parseFloat(paymentAmount) > 0 && paymentMode) {
+      initialPaidAmount = markAsFullyPaid ? totalAmount : paymentAmount;
+      currentBalanceAmount = (parseFloat(totalAmount) - parseFloat(initialPaidAmount)).toFixed(2);
+      
+      if (parseFloat(currentBalanceAmount) <= 0) {
+        invoiceStatus = 'paid';
+        currentBalanceAmount = '0.00'; // Ensure balance is not negative
+      } else if (parseFloat(initialPaidAmount) > 0) {
+        invoiceStatus = 'sent'; // If partial payment, status becomes sent
+      }
+    }
+
+
     // Create the invoice with proper typing
     const invoiceData = {
       userId,
@@ -142,16 +168,43 @@ export async function POST(request: NextRequest) {
       subtotal,
       taxAmount: taxAmount || '0.00',
       totalAmount,
-      balanceAmount,
-      status: status || 'draft',
+      paidAmount: initialPaidAmount, // Set initial paid amount
+      balanceAmount: currentBalanceAmount, // Set initial balance amount
+      status: invoiceStatus, // Set initial status
       notes: notes ? notes : null,
       termsConditions: termsConditions ? termsConditions : null,
+      bankDetailsId: body.bankDetailsId || null,
+      signatureId: signatureId || null,
+      paymentOptionId: paymentOptionId || null,
     }
 
     const [newInvoice] = await db
       .insert(invoicesTable)
       .values(invoiceData)
       .returning()
+
+    // If an initial payment was made, create a payment record
+    if (paymentAmount && parseFloat(paymentAmount) > 0 && paymentMode) {
+      const paymentRecordData = {
+        userId,
+        orgId,
+        invoiceId: newInvoice.id,
+        clientId: clientId,
+        amount: initialPaidAmount,
+        paymentMode: paymentMode,
+        notes: paymentNotes || null,
+        isFullyPaid: parseFloat(currentBalanceAmount) <= 0,
+      };
+
+      const [newPaymentRecord] = await db.insert(paymentRecordsTable).values(paymentRecordData).returning();
+      initialPaymentRecordId = newPaymentRecord.id;
+
+      // Update the invoice with the initialPaymentRecordId
+      await db.update(invoicesTable)
+        .set({ initialPaymentRecordId: initialPaymentRecordId })
+        .where(eq(invoicesTable.id, newInvoice.id));
+    }
+
 
     // Create invoice items
     const invoiceItemsData = items.map((item: any) => ({
@@ -178,7 +231,7 @@ export async function POST(request: NextRequest) {
     )
 
     return NextResponse.json({
-      invoice: newInvoice,
+      invoice: { ...newInvoice, initialPaymentRecordId }, // Return the updated invoice
       items: invoiceItems
     }, { status: 201 })
 

@@ -127,6 +127,13 @@
       "when": 1766569882691,
       "tag": "0017_handy_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1767172896188,
+      "tag": "0018_plain_the_stranger",
+      "breakpoints": true
     }
   ]
 }

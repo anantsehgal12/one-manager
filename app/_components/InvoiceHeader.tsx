@@ -126,8 +126,8 @@ export default function InvoiceHeader({
   }
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="container mx-auto px-6 py-4">
+    <header className="border-b w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div className="w-full px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Left Section - Back Icon and Title */}
           <div className="flex items-center space-x-15">
